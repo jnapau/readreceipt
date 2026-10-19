@@ -69,9 +69,9 @@ export default function HomePage() {
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="Read Receipts home">
+        <a className="brand" href="#top" aria-label="read receipts home">
           <span className="brand-mark" aria-hidden="true">rr.</span>
-          <span>Read Receipts</span>
+          <span>read receipts</span>
         </a>
         <button className="shelf-link" type="button" onClick={() => setAccountOpen(true)}>
           <Bookmark size={18} strokeWidth={1.7} aria-hidden="true" />
@@ -113,7 +113,8 @@ export default function HomePage() {
             <h2 id="feed-title">The latest pages</h2>
             <p>Good books travel from one person to another.</p>
           </div>
-          <span className="sample-badge">{feedMode === "live" ? "From our readers" : feedMode === "error" ? "Sample stories · archive unavailable" : "Sample stories"}</span>
+          {feedMode === "live" && <span className="sample-badge">From our readers</span>}
+          {feedMode === "error" && <span className="sample-badge">Archive unavailable</span>}
         </div>
 
         <div className="feed-grid">
@@ -124,7 +125,7 @@ export default function HomePage() {
       </section>
       <PostDetailModal post={detailPost} onClose={() => setDetailPost(null)} />
       <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
-      <footer className="site-footer"><span>Read Receipts</span><span>Made for the books you can&apos;t keep to yourself.</span></footer>
+      <footer className="site-footer"><span>read receipts</span><span>Made for the books you can&apos;t keep to yourself.</span></footer>
     </main>
   );
 }
