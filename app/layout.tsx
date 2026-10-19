@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Fraunces, Pinyon_Script } from "next/font/google";
+import { Toaster } from "@/components/toast";
 import "./globals.css";
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-body" });
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body className={`${dmSans.variable} ${fraunces.variable} ${pinyon.variable}`}>
         {children}
+        <Toaster />
       </body>
     </html>
   );

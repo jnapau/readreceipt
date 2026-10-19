@@ -9,7 +9,12 @@ import { RecommendationModal, type NewPost } from "@/components/recommendation-m
 import type { Book } from "@/lib/books";
 import type { Dedication } from "@/lib/sample-data";
 
-export function HeroControls({ onPost, onDedication, dedications, onRequestAuth }: { onPost: (post: NewPost) => Promise<void>; onDedication: (dedication: NewDedication) => Promise<void>; dedications: Dedication[]; onRequestAuth: () => void }) {
+export function HeroControls({ onPost, onDedication, dedications, onRequestAuth }: {
+  onPost: (post: NewPost) => Promise<string | void>;
+  onDedication: (dedication: NewDedication) => Promise<string | void>;
+  dedications: Dedication[];
+  onRequestAuth: () => void;
+}) {
   const [recommendSearchOpen, setRecommendSearchOpen] = useState(false);
   const [dedicationSearchOpen, setDedicationSearchOpen] = useState(false);
   const [recommendBook, setRecommendBook] = useState<Book | null>(null);
@@ -37,9 +42,9 @@ export function HeroControls({ onPost, onDedication, dedications, onRequestAuth 
         </div>
       </div>
       <BookSearchModal open={recommendSearchOpen} onClose={closeRecommendSearch} onSelect={(book) => { setRecommendSearchOpen(false); setRecommendBook(book); }} />
-      <RecommendationModal book={recommendBook} onClose={() => setRecommendBook(null)} onChangeBook={() => { setRecommendBook(null); setRecommendSearchOpen(true); }} onPost={async (post) => { await onPost(post); setRecommendBook(null); }} />
+      <RecommendationModal book={recommendBook} onClose={() => setRecommendBook(null)} onChangeBook={() => { setRecommendBook(null); setRecommendSearchOpen(true); }} onPost={async (post) => { const id = await onPost(post); return id; }} />
       <BookSearchModal open={dedicationSearchOpen} onClose={closeDedicationSearch} onSelect={(book) => { setDedicationSearchOpen(false); setDedicationBook(book); }} />
-      <DedicationModal book={dedicationBook} onClose={() => setDedicationBook(null)} onChangeBook={() => { setDedicationBook(null); setDedicationSearchOpen(true); }} onSend={async (dedication) => { await onDedication(dedication); setDedicationBook(null); }} />
+      <DedicationModal book={dedicationBook} onClose={() => setDedicationBook(null)} onChangeBook={() => { setDedicationBook(null); setDedicationSearchOpen(true); }} onSend={async (dedication) => { const id = await onDedication(dedication); return id; }} />
       {recipientResultsOpen && <DedicationSearchDialog query={recipientQuery} dedications={dedications} onClose={() => setRecipientResultsOpen(false)} onRequestAuth={onRequestAuth} />}
     </>
   );
