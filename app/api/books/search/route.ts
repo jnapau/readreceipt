@@ -1,4 +1,4 @@
-import { bookSpineColor, type Book } from "@/lib/books";
+import { bookSpineColor, normalizeGenre, type Book } from "@/lib/books";
 
 type OpenLibraryDoc = {
   key?: unknown;
@@ -6,6 +6,7 @@ type OpenLibraryDoc = {
   author_name?: unknown;
   cover_i?: unknown;
   first_publish_year?: unknown;
+  subject?: unknown;
 };
 
 export async function GET(request: Request) {
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
 
   const search = new URL("https://openlibrary.org/search.json");
   search.searchParams.set("q", query);
-  search.searchParams.set("fields", "key,title,author_name,cover_i,first_publish_year");
+  search.searchParams.set("fields", "key,title,author_name,cover_i,first_publish_year,subject");
   search.searchParams.set("limit", "12");
 
   try {
@@ -37,6 +38,20 @@ export async function GET(request: Request) {
       const author = Array.isArray(doc.author_name) && typeof doc.author_name[0] === "string"
         ? doc.author_name[0]
         : "Unknown author";
+
+      let genre: string | undefined = undefined;
+      if (Array.isArray(doc.subject)) {
+        for (const sub of doc.subject) {
+          if (typeof sub === "string") {
+            const normalized = normalizeGenre(sub);
+            if (normalized) {
+              genre = normalized;
+              break;
+            }
+          }
+        }
+      }
+
       return [{
         key: doc.key,
         title: doc.title,
@@ -44,6 +59,7 @@ export async function GET(request: Request) {
         coverId: typeof doc.cover_i === "number" ? doc.cover_i : undefined,
         firstPublishYear: typeof doc.first_publish_year === "number" ? doc.first_publish_year : undefined,
         color: bookSpineColor(doc.key),
+        genre,
       }];
     });
 

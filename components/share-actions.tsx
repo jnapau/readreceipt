@@ -39,13 +39,23 @@ export function CopyLinkButton({ id, className = "" }: { id: string; className?:
   );
 }
 
-export function ShareStoryButton({ post }: { post: SamplePost }) {
+export function ShareStoryButton({
+  post,
+  iconOnly = false,
+  className = "",
+}: {
+  post: SamplePost;
+  iconOnly?: boolean;
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button
-        className="instagram-share-button"
+        className={iconOnly ? `instagram-share-icon-btn ${className}`.trim() : `instagram-share-button ${className}`.trim()}
         type="button"
+        title="Share to Instagram Story"
+        aria-label="Share to Instagram Story"
         onClick={(event) => {
           event.stopPropagation();
           // Copy inside the click gesture so Safari allows clipboard access.
@@ -53,7 +63,8 @@ export function ShareStoryButton({ post }: { post: SamplePost }) {
           setOpen(true);
         }}
       >
-        <InstagramIcon size={16} /> Share
+        <InstagramIcon size={iconOnly ? 15 : 16} />
+        {!iconOnly && " Share"}
       </button>
       {open && <StorySheet post={post} onClose={() => setOpen(false)} />}
     </>

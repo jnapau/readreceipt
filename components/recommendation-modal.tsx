@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { ArrowLeft, BookOpen, Check, CheckCircle2, MessageCircle, X } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
 import { CopyLinkButton, ShareStoryButton } from "@/components/share-actions";
-import type { Book } from "@/lib/books";
+import { BOOK_GENRES, type Book } from "@/lib/books";
 import type { SamplePost } from "@/lib/sample-data";
 import { createClient } from "@/lib/supabase/client";
 
@@ -42,6 +42,7 @@ export function RecommendationModal({ book, onClose, onPost, onChangeBook }: {
   const headingId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const [rating, setRating] = useState(0);
+  const [genre, setGenre] = useState(book?.genre ?? "");
   const [quote, setQuote] = useState("");
   const [note, setNote] = useState("");
   const [from, setFrom] = useState("");
@@ -54,6 +55,7 @@ export function RecommendationModal({ book, onClose, onPost, onChangeBook }: {
   useEffect(() => {
     setSuggestions([]);
     if (!book) return;
+    setGenre(book.genre ?? "");
     const client = createClient();
     if (!client) return;
     let active = true;
@@ -69,7 +71,7 @@ export function RecommendationModal({ book, onClose, onPost, onChangeBook }: {
 
   useEffect(() => {
     if (!book) return;
-    setRating(0); setQuote(""); setNote(""); setFrom(""); setSpoiler(false); setError(""); setPublished(null);
+    setRating(0); setGenre(book.genre ?? ""); setQuote(""); setNote(""); setFrom(""); setSpoiler(false); setError(""); setPublished(null);
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -93,7 +95,8 @@ export function RecommendationModal({ book, onClose, onPost, onChangeBook }: {
     if (!note.trim()) { setError("Add a short note so people know why you chose this book."); return; }
     setSending(true); setError("");
     try {
-      const payload: NewPost = { book, rating, quote: quote.trim(), note: note.trim(), from: from.trim() || "an anonymous reader", spoiler };
+      const updatedBook: Book = { ...book, genre: genre.trim() || book.genre };
+      const payload: NewPost = { book: updatedBook, rating, quote: quote.trim(), note: note.trim(), from: from.trim() || "an anonymous reader", spoiler };
       const id = await onPost(payload);
       setPublished({ ...payload, id: id || `note-${Date.now()}` });
     }
@@ -139,6 +142,32 @@ export function RecommendationModal({ book, onClose, onPost, onChangeBook }: {
               </div>
 
               <div className="recommend-field"><div className="recommend-label"><span>How much did it stay with you?</span><small>{rating ? `${rating} of 5 cats` : "Choose a rating"}</small></div><CatPicker value={rating} onChange={(value) => { setRating(value); setError(""); }} /></div>
+
+              <div className="recommend-field">
+                <div className="recommend-label">
+                  <span>Genre <small>(optional · helps reader discovery)</small></span>
+                  {genre && <button type="button" className="relationship-skip-btn" onClick={() => setGenre("")}>Clear</button>}
+                </div>
+                <div className="genre-chips" role="group" aria-label="Genre categories">
+                  {BOOK_GENRES.slice(0, 8).map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      className={`genre-chip${genre === g ? " genre-chip-active" : ""}`}
+                      onClick={() => setGenre(genre === g ? "" : g)}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  id="recommendation-genre"
+                  value={genre}
+                  onChange={(event) => setGenre(event.target.value)}
+                  placeholder="Or custom genre (e.g. Literary Fiction, Fantasy)"
+                  maxLength={50}
+                />
+              </div>
 
               <div className="recommend-field"><label className="recommend-label" htmlFor="quote"><span>Favorite line <small>(optional)</small></span></label><textarea id="quote" value={quote} onChange={(event) => setQuote(event.target.value)} placeholder="A line you want to pass along…" rows={2} />{suggestions.length > 0 && <div className="quote-suggestions"><MessageCircle size={15} aria-hidden="true" />{suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => setQuote(suggestion)}>{suggestion}</button>)}</div>}</div>
 

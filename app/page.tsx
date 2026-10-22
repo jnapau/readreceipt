@@ -19,14 +19,30 @@ import { fetchPurrCounts, givePurr, readPurred, samplePurrSeed } from "@/lib/int
 async function persistPost(
   kind: "recommendation" | "dedication",
   book: Book,
-  values: { rating?: number; quote: string; note: string; recipientName?: string; from: string; spoiler?: boolean }
+  values: {
+    rating?: number;
+    quote: string;
+    note: string;
+    recipientName?: string;
+    relationship?: string;
+    from: string;
+    spoiler?: boolean;
+  }
 ) {
   const supabase = createClient();
   if (!supabase) throw new Error("The book archive is unavailable right now.");
   const openLibraryKey = book.key ?? `title:${book.title.toLowerCase()}`;
   let { data: storedBook } = await supabase.from("books").select("id").eq("open_library_key", openLibraryKey).maybeSingle();
   if (!storedBook) {
-    const payload: { open_library_key: string; title: string; author: string; cover_id: number | null; color: string; cover_url?: string } = {
+    const payload: {
+      open_library_key: string;
+      title: string;
+      author: string;
+      cover_id: number | null;
+      color: string;
+      cover_url?: string;
+      genre?: string;
+    } = {
       open_library_key: openLibraryKey,
       title: book.title,
       author: book.author,
@@ -34,15 +50,20 @@ async function persistPost(
       color: book.color,
     };
     if (book.coverUrl) payload.cover_url = book.coverUrl;
+    if (book.genre) payload.genre = book.genre;
     let result = await supabase.from("books").insert(payload).select("id").single();
-    if (result.error && book.coverUrl) {
-      delete payload.cover_url;
+    if (result.error) {
+      delete payload.genre;
       result = await supabase.from("books").insert(payload).select("id").single();
+      if (result.error && book.coverUrl) {
+        delete payload.cover_url;
+        result = await supabase.from("books").insert(payload).select("id").single();
+      }
     }
     if (result.error) throw result.error;
     storedBook = result.data;
   }
-  const { data, error } = await supabase.from("posts").insert({
+  const postPayload: Record<string, unknown> = {
     kind,
     book_id: storedBook.id,
     rating: values.rating ?? null,
@@ -51,8 +72,16 @@ async function persistPost(
     recipient_name: values.recipientName ?? null,
     sender_nickname: values.from,
     spoiler: values.spoiler ?? false,
-  }).select("id").single();
-  if (error) throw error;
+  };
+  if (values.relationship) postPayload.relationship = values.relationship;
+  let { data, error } = await supabase.from("posts").insert(postPayload).select("id").single();
+  if (error && values.relationship) {
+    delete postPayload.relationship;
+    const retryResult = await supabase.from("posts").insert(postPayload).select("id").single();
+    data = retryResult.data;
+    error = retryResult.error;
+  }
+  if (error || !data) throw error ?? new Error("Failed to save post");
   return data.id as string;
 }
 
@@ -62,7 +91,7 @@ export default function HomePage() {
   );
   const [dedications, setDedications] = useState<Dedication[]>(sampleDedications);
   const [feedMode, setFeedMode] = useState<"loading" | "sample" | "live" | "error">("loading");
-  const [feedFilter, setFeedFilter] = useState<"all" | "recommendations" | "dedications">("all");
+  const [feedFilter, setFeedFilter] = useState<"all" | "recommendations" | "dedications">("recommendations");
   const [detailPost, setDetailPost] = useState<SamplePost | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
 
@@ -85,6 +114,7 @@ export default function HomePage() {
           const mappedDed: Dedication[] = liveDedications.map((item) => ({
             id: item.id,
             recipient: item.recipient ?? "someone",
+            relationship: item.relationship,
             book: item.book,
             quote: item.quote,
             message: item.note,
@@ -154,7 +184,7 @@ export default function HomePage() {
       from: post.from,
       spoiler: post.spoiler,
     });
-    const nextPost: SamplePost = { ...post, id, kind: "recommendation", createdAt: new Date().toISOString() };
+    const nextPost: SamplePost = { ...post, id, kind: "recommendation", genre: post.book.genre, createdAt: new Date().toISOString() };
     setPosts((current) => (feedMode === "live" ? [nextPost, ...current] : [nextPost]));
     setFeedMode("live");
     return id;
@@ -165,6 +195,7 @@ export default function HomePage() {
       quote: dedication.quote,
       note: dedication.message,
       recipientName: dedication.recipient,
+      relationship: dedication.relationship,
       from: dedication.from,
       spoiler: dedication.spoiler,
     });

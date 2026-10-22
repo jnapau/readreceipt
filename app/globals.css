@@ -240,6 +240,8 @@ button:disabled { cursor: not-allowed; }
 .post-card-note { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0 0 16px; }
 .post-card .post-footer { margin-top: auto; }
 .dedication-for { color: var(--gold); font-family: var(--font-script), cursive; font-size: 24px; margin: 6px 0 2px; line-height: 1.1; }
+.dedication-relationship { font-family: var(--font-body), sans-serif; font-size: 13px; font-weight: 500; color: var(--muted); vertical-align: middle; }
+.post-genre-tag { color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; font-size: 11px; }
 
 .site-footer { border-top: 1px solid var(--border); max-width: 1200px; margin: 0 auto; padding: 25px 0 35px; display: flex; justify-content: space-between; gap: 20px; color: var(--muted); font-size: 12px; }
 .site-footer span:first-child { font-family: var(--font-display), serif; color: var(--ink); font-size: 17px; }
@@ -340,6 +342,66 @@ button:disabled { cursor: not-allowed; }
   transition: filter .2s ease, transform .2s ease;
 }
 .instagram-share-button:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.instagram-share-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 99px;
+  border: 0;
+  color: #fff;
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  box-shadow: 0 2px 8px rgba(220,39,67,0.3);
+  cursor: pointer;
+  transition: transform .2s ease, filter .2s ease;
+}
+.instagram-share-icon-btn:hover { filter: brightness(1.15); transform: translateY(-1px) scale(1.08); }
+
+.genre-chips, .relationship-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.genre-chip, .relationship-chip {
+  padding: 5px 11px;
+  border-radius: 99px;
+  background: #19192e;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.genre-chip:hover, .relationship-chip:hover {
+  color: var(--ink);
+  border-color: rgba(242,193,78,0.5);
+}
+.genre-chip-active, .relationship-chip-active {
+  background: rgba(242,193,78,0.18) !important;
+  color: var(--gold) !important;
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 10px rgba(242,193,78,0.15);
+}
+.relationship-chip-pass {
+  background: transparent;
+  border-style: dashed;
+  color: var(--muted);
+}
+.relationship-chip-pass-active {
+  border-color: var(--border) !important;
+  color: var(--muted) !important;
+}
+.relationship-skip-btn {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.relationship-skip-btn:hover {
+  color: var(--gold);
+}
+
 .note-action-button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 700; transition: all .2s ease; }
 .note-action-button:hover { color: var(--gold); border-color: var(--gold); }
 .story-backdrop { z-index: 120; }

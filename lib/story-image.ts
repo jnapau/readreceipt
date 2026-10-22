@@ -120,7 +120,10 @@ export async function renderStoryImage(post: SamplePost): Promise<Blob> {
   ctx.fillStyle = GOLD;
   ctx.font = `700 24px ${body}`;
   ctx.letterSpacing = "6px";
-  ctx.fillText(dedication ? "A BOOK DEDICATION" : "A BOOK RECOMMENDATION", 540, 300);
+  const subhead = dedication
+    ? (post.book.genre ? `A BOOK DEDICATION · ${post.book.genre.toUpperCase()}` : "A BOOK DEDICATION")
+    : (post.book.genre ? `A BOOK RECOMMENDATION · ${post.book.genre.toUpperCase()}` : "A BOOK RECOMMENDATION");
+  ctx.fillText(subhead, 540, 300);
   ctx.letterSpacing = "0px";
 
   // Cover.
@@ -162,7 +165,8 @@ export async function renderStoryImage(post: SamplePost): Promise<Blob> {
   if (dedication) {
     ctx.fillStyle = GOLD;
     ctx.font = `400 84px ${script}`;
-    ctx.fillText(`For ${post.recipient ?? "you"}`, 540, y + 50, 900);
+    const forText = post.relationship ? `For ${post.recipient ?? "you"} (${post.relationship})` : `For ${post.recipient ?? "you"}`;
+    ctx.fillText(forText, 540, y + 50, 900);
     y += 110;
   } else {
     const cat = new Path2D(CAT_PATH);

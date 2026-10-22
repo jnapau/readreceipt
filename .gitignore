@@ -5,3 +5,5 @@ out/
 !.env.example
 *.tsbuildinfo
 supabase/.temp/
+*.csv
+*synthetic*.json

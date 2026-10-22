@@ -59,9 +59,17 @@ export function PostDetailModal({ post, onClose, revealed, onToggleReveal, purr 
           <div className="detail-body">
             <div className="detail-art"><CoverArt book={post.book} sizes="145px" /></div>
             <div>
-              <p className="post-type">{post.book.author}</p>
+              <p className="post-type">
+                {post.book.author}
+                {post.book.genre && <span className="post-genre-tag"> · {post.book.genre}</span>}
+              </p>
               <h3>{post.book.title}</h3>
-              {dedication ? <p className="dedication-for">For {post.recipient}</p> : <CatRating rating={post.rating} />}
+              {dedication ? (
+                <p className="dedication-for">
+                  For {post.recipient}
+                  {post.relationship && <span className="dedication-relationship"> ({post.relationship})</span>}
+                </p>
+              ) : <CatRating rating={post.rating} />}
               <div className={hidden ? "detail-spoiler-hidden" : ""}>
                 <blockquote>“{post.quote || "A story worth passing on."}”</blockquote>
                 <p>{post.note}</p>

@@ -6,10 +6,11 @@ import { ArrowLeft, BookHeart, Check, CheckCircle2, MessageCircle, X } from "luc
 import { CoverArt } from "@/components/cover-art";
 import { CopyLinkButton, ShareStoryButton } from "@/components/share-actions";
 import type { Book } from "@/lib/books";
-import { quoteSuggestions, type SamplePost } from "@/lib/sample-data";
+import { DEDICATION_RELATIONSHIPS, quoteSuggestions, type SamplePost } from "@/lib/sample-data";
 
 export type NewDedication = {
   recipient: string;
+  relationship?: string;
   book: Book;
   quote: string;
   message: string;
@@ -26,6 +27,7 @@ export function DedicationModal({ book, onClose, onSend, onChangeBook }: {
   const headingId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const [recipient, setRecipient] = useState("");
+  const [relationship, setRelationship] = useState("");
   const [quote, setQuote] = useState("");
   const [message, setMessage] = useState("");
   const [from, setFrom] = useState("");
@@ -44,7 +46,7 @@ export function DedicationModal({ book, onClose, onSend, onChangeBook }: {
 
   useEffect(() => {
     if (!book) return;
-    setRecipient(""); setQuote(""); setMessage(""); setFrom(""); setSpoiler(false); setError(""); setPublished(null);
+    setRecipient(""); setRelationship(""); setQuote(""); setMessage(""); setFrom(""); setSpoiler(false); setError(""); setPublished(null);
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -68,7 +70,15 @@ export function DedicationModal({ book, onClose, onSend, onChangeBook }: {
     if (!message.trim()) { setError("Write a short message to send with the book."); return; }
     setSending(true); setError("");
     try {
-      const payload: NewDedication = { recipient: recipient.trim(), book, quote: quote.trim(), message: message.trim(), from: from.trim() || "an anonymous reader", spoiler };
+      const payload: NewDedication = {
+        recipient: recipient.trim(),
+        relationship: relationship.trim() || undefined,
+        book,
+        quote: quote.trim(),
+        message: message.trim(),
+        from: from.trim() || "an anonymous reader",
+        spoiler,
+      };
       const id = await onSend(payload);
       setPublished({
         id: id || `dedication-${Date.now()}`,
@@ -78,6 +88,7 @@ export function DedicationModal({ book, onClose, onSend, onChangeBook }: {
         quote: payload.quote,
         note: payload.message,
         recipient: payload.recipient,
+        relationship: payload.relationship,
         from: payload.from,
         spoiler: payload.spoiler,
       });
@@ -97,7 +108,7 @@ export function DedicationModal({ book, onClose, onSend, onChangeBook }: {
         {published ? (
           <div className="publish-confirm">
             <div className="publish-confirm-icon"><CheckCircle2 size={44} aria-hidden="true" /></div>
-            <h3>Dedicated to {published.recipient}</h3>
+            <h3>Dedicated to {published.recipient}{published.relationship ? ` (${published.relationship})` : ""}</h3>
             <p>Your note has been tied to <strong>{published.book.title}</strong> and can now be discovered.</p>
             <div className="publish-book-row">
               <div className="publish-book-art"><CoverArt book={published.book} sizes="60px" /></div>
@@ -117,7 +128,54 @@ export function DedicationModal({ book, onClose, onSend, onChangeBook }: {
         ) : (
           <>
             <div className="recommend-scroll">
-              <div className="recommend-field dedication-recipient-field"><label className="recommend-label" htmlFor="recipient"><span>To whom?</span><small>Names are matched exactly</small></label><input id="recipient" value={recipient} onChange={(event) => { setRecipient(event.target.value); setError(""); }} placeholder="A first name or nickname" maxLength={60} autoComplete="off" /></div>
+              <div className="recommend-field dedication-recipient-field">
+                <label className="recommend-label" htmlFor="recipient">
+                  <span>To whom?</span>
+                  <small>Names are matched exactly</small>
+                </label>
+                <input id="recipient" value={recipient} onChange={(event) => { setRecipient(event.target.value); setError(""); }} placeholder="A first name or nickname" maxLength={60} autoComplete="off" />
+              </div>
+
+              <div className="recommend-field dedication-relationship-field">
+                <div className="recommend-label">
+                  <span>Who are they to you? <small>(optional · lover, situationship, ex, friend…)</small></span>
+                  {relationship && (
+                    <button
+                      type="button"
+                      className="relationship-skip-btn"
+                      onClick={() => setRelationship("")}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="relationship-chips" role="group" aria-label="Relationship category">
+                  {DEDICATION_RELATIONSHIPS.map((rel) => (
+                    <button
+                      key={rel}
+                      type="button"
+                      className={`relationship-chip${relationship.toLowerCase() === rel ? " relationship-chip-active" : ""}`}
+                      onClick={() => setRelationship(relationship.toLowerCase() === rel ? "" : rel)}
+                    >
+                      {rel}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={`relationship-chip relationship-chip-pass${relationship === "" ? " relationship-chip-pass-active" : ""}`}
+                    onClick={() => setRelationship("")}
+                  >
+                    Pass / skip
+                  </button>
+                </div>
+                <input
+                  id="dedication-custom-relationship"
+                  value={relationship}
+                  onChange={(event) => setRelationship(event.target.value)}
+                  placeholder="Or type custom (e.g. soulmate, favorite stranger, roommate)"
+                  maxLength={40}
+                />
+              </div>
 
               <div className="recommend-book-row">
                 <div className="recommend-book-art"><CoverArt book={book} sizes="70px" /></div>

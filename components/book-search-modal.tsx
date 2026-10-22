@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, ArrowRight, BookOpen, ImagePlus, Plus, Search, Trash2, X } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
-import { bookSpineColor, type Book } from "@/lib/books";
+import { bookSpineColor, BOOK_GENRES, type Book } from "@/lib/books";
 import { collageBooks } from "@/lib/sample-data";
 
 type SearchState = "idle" | "loading" | "success" | "error";
@@ -58,6 +58,7 @@ export function BookSearchModal({ open, onClose, onSelect }: {
   const [manualMode, setManualMode] = useState(false);
   const [manualTitle, setManualTitle] = useState("");
   const [manualAuthor, setManualAuthor] = useState("");
+  const [manualGenre, setManualGenre] = useState("");
   const [manualCover, setManualCover] = useState<string | null>(null);
   const [manualError, setManualError] = useState("");
 
@@ -71,6 +72,7 @@ export function BookSearchModal({ open, onClose, onSelect }: {
       setManualMode(false);
       setManualTitle("");
       setManualAuthor("");
+      setManualGenre("");
       setManualCover(null);
       setManualError("");
       return;
@@ -162,6 +164,7 @@ export function BookSearchModal({ open, onClose, onSelect }: {
       key: `custom:${Date.now()}:${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       title,
       author,
+      genre: manualGenre.trim() || undefined,
       coverUrl: manualCover || undefined,
       color: bookSpineColor(title),
     };
@@ -256,6 +259,31 @@ export function BookSearchModal({ open, onClose, onSelect }: {
                       placeholder="e.g. Gabrielle Zevin"
                       maxLength={100}
                       required
+                    />
+                  </div>
+
+                  <div className="recommend-field">
+                    <label className="recommend-label" htmlFor="manual-genre">
+                      <span>Genre <small>(optional · helps reader discovery)</small></span>
+                    </label>
+                    <div className="genre-chips" role="group" aria-label="Genre categories">
+                      {BOOK_GENRES.slice(0, 8).map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          className={`genre-chip${manualGenre === g ? " genre-chip-active" : ""}`}
+                          onClick={() => setManualGenre(manualGenre === g ? "" : g)}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      id="manual-genre"
+                      value={manualGenre}
+                      onChange={(e) => setManualGenre(e.target.value)}
+                      placeholder="Or type a custom genre (e.g. Cozy Mystery, Gothic Fiction)"
+                      maxLength={50}
                     />
                   </div>
 
