@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 
 const GENRES = [
   "Classics",
@@ -175,7 +174,11 @@ function generateRecords(numRecords = 500) {
   return records;
 }
 
-const records = generateRecords(500);
+const requestedCount = Number.parseInt(process.argv[2] || "500", 10);
+const recordCount = Number.isFinite(requestedCount) && requestedCount > 0
+  ? Math.min(requestedCount, 100_000)
+  : 500;
+const records = generateRecords(recordCount);
 
 const csvHeaders = Object.keys(records[0]);
 const csvRows = records.map((r) =>
@@ -189,8 +192,9 @@ const csvRows = records.map((r) =>
 );
 const csvContent = [csvHeaders.join(","), ...csvRows].join("\n");
 
-fs.writeFileSync("read_receipts_synthetic_500.csv", csvContent, "utf8");
-fs.writeFileSync("read_receipts_synthetic_500.json", JSON.stringify(records, null, 2), "utf8");
+const outputBase = `read_receipts_synthetic_${recordCount}`;
+fs.writeFileSync(`${outputBase}.csv`, csvContent, "utf8");
+fs.writeFileSync(`${outputBase}.json`, JSON.stringify(records, null, 2), "utf8");
 
 console.log(`Generated ${records.length} synthetic records successfully!`);
-console.log("Saved read_receipts_synthetic_500.csv and read_receipts_synthetic_500.json");
+console.log(`Saved ${outputBase}.csv and ${outputBase}.json`);

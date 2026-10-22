@@ -86,7 +86,7 @@ export function ShareStoryButton({
         }}
       >
         <InstagramIcon size={iconOnly ? 15 : 16} />
-        {!iconOnly && (sharing ? " Preparing…" : " Share")}
+        {!iconOnly && (sharing ? " Preparing Story…" : " Instagram Story")}
       </button>
       {open && <StorySheet post={post} onClose={() => setOpen(false)} />}
     </>

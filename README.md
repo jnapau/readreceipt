@@ -29,6 +29,27 @@ Copy `.env.example` to `.env.local` and add the publishable key from the Supabas
 
 The Stage 6 migration in `supabase/migrations/20261019055746_stage6_public_feed.sql` adds public-safe feed reads and a Top Pick view. Top Pick counts recommendations made before the current three-day window, so it changes at most once per window. While there is no older history, it uses the latest recommendation.
 
+### Analytics data
+
+The deployed app exposes public-safe feed data with `genre` and dedication `relationship` already flattened into analysis-ready rows:
+
+- JSON: [`/api/export`](https://rreceipt.vercel.app/api/export)
+- CSV download: [`/api/export?format=csv`](https://rreceipt.vercel.app/api/export?format=csv)
+
+The CSV opens directly in Excel, Google Sheets, pandas, or R. Recommendation rows have a blank `relationship`; dedication rows have a blank `rating`. A missing dedication relationship is exported as `unspecified`, so it remains measurable instead of being confused with recommendation data.
+
+To generate synthetic data locally without changing the production database:
+
+```bash
+# 500 rows (default)
+npm run generate:data
+
+# Choose a row count, up to 100,000
+npm run generate:data -- 5000
+```
+
+This writes matching CSV and JSON files such as `read_receipts_synthetic_5000.csv` and `read_receipts_synthetic_5000.json`. The generator uses weighted genres, relationship types, ratings, and timestamps so it is useful for dashboards and data-science experiments, but it should not be presented as real user behavior.
+
 ### Vercel deployment
 
 Import this GitHub repository as a **Next.js** project. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to Production, Preview, and Development environments using the same values as `.env.local`. Do not add a Supabase secret or service-role key. The build command is `npm run build`.
