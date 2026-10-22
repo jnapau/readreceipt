@@ -119,7 +119,7 @@ export async function givePurr(id: string) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Marginalia (reader notes on recommendations)                        */
+/* Marginalia (reader notes on recommendations and dedications)        */
 /* ------------------------------------------------------------------ */
 
 export type Marginalia = {

@@ -2,12 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, BookOpen, Check, CheckCircle2, MessageCircle, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, X } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
-import { CopyLinkButton, ShareStoryButton } from "@/components/share-actions";
 import { BOOK_GENRES, type Book } from "@/lib/books";
-import type { SamplePost } from "@/lib/sample-data";
-import { createClient } from "@/lib/supabase/client";
 
 export type NewPost = {
   book: Book;
@@ -49,29 +46,10 @@ export function RecommendationModal({ book, onClose, onPost, onChangeBook }: {
   const [spoiler, setSpoiler] = useState(false);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [published, setPublished] = useState<SamplePost | null>(null);
-
-  useEffect(() => {
-    setSuggestions([]);
-    if (!book) return;
-    setGenre(book.genre ?? "");
-    const client = createClient();
-    if (!client) return;
-    let active = true;
-    const key = book.key ?? `title:${book.title.toLowerCase()}`;
-    void (async () => {
-      const { data: stored } = await client.from("books").select("id").eq("open_library_key", key).maybeSingle();
-      if (!stored) return;
-      const { data } = await client.from("public_posts").select("quote").eq("book_id", stored.id).neq("quote", "").order("created_at", { ascending: false }).limit(12);
-      if (active) setSuggestions([...new Set((data ?? []).map((row) => row.quote.trim()).filter(Boolean))].slice(0, 3));
-    })();
-    return () => { active = false; };
-  }, [book]);
 
   useEffect(() => {
     if (!book) return;
-    setRating(0); setGenre(book.genre ?? ""); setQuote(""); setNote(""); setFrom(""); setSpoiler(false); setError(""); setPublished(null);
+    setRating(0); setGenre(book.genre ?? ""); setQuote(""); setNote(""); setFrom(""); setSpoiler(false); setError("");
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -97,8 +75,8 @@ export function RecommendationModal({ book, onClose, onPost, onChangeBook }: {
     try {
       const updatedBook: Book = { ...book, genre: genre.trim() || book.genre };
       const payload: NewPost = { book: updatedBook, rating, quote: quote.trim(), note: note.trim(), from: from.trim() || "an anonymous reader", spoiler };
-      const id = await onPost(payload);
-      setPublished({ ...payload, id: id || `note-${Date.now()}` });
+      await onPost(payload);
+      window.location.assign("/");
     }
     catch { setError("Your recommendation could not be saved. Please try again."); }
     finally { setSending(false); }
@@ -108,32 +86,11 @@ export function RecommendationModal({ book, onClose, onPost, onChangeBook }: {
     <div className="book-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="recommend-dialog" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={headingId}>
         <div className="recommend-header">
-          <div><span className="book-dialog-kicker"><BookOpen size={15} aria-hidden="true" /> A recommendation</span><h2 id={headingId}>{published ? "Passed along" : "Pass it along"}</h2><p>{published ? "Your note is now in the archive." : "A few words can make a book feel like a letter."}</p></div>
+          <div><span className="book-dialog-kicker"><BookOpen size={15} aria-hidden="true" /> A recommendation</span><h2 id={headingId}>Pass it along</h2><p>A few words can make a book feel like a letter.</p></div>
           <button className="book-dialog-close" type="button" onClick={onClose} aria-label="Close recommendation form"><X size={20} aria-hidden="true" /></button>
         </div>
 
-        {published ? (
-          <div className="publish-confirm">
-            <div className="publish-confirm-icon"><CheckCircle2 size={44} aria-hidden="true" /></div>
-            <h3>Thank you for sharing</h3>
-            <p>Your recommendation for <strong>{published.book.title}</strong> has been posted to the archive.</p>
-            <div className="publish-book-row">
-              <div className="publish-book-art"><CoverArt book={published.book} sizes="60px" /></div>
-              <div className="publish-book-meta">
-                <strong>{published.book.title}</strong>
-                <span>by {published.book.author}</span>
-              </div>
-            </div>
-            <div className="publish-actions">
-              <ShareStoryButton post={published} />
-              {published.id && <CopyLinkButton id={published.id} />}
-            </div>
-            <div className="publish-footer">
-              <button className="button button-primary" type="button" onClick={onClose}>Done</button>
-            </div>
-          </div>
-        ) : (
-          <>
+        <>
             <div className="recommend-scroll">
               <div className="recommend-book-row">
                 <div className="recommend-book-art"><CoverArt book={book} sizes="70px" /></div>
@@ -169,7 +126,7 @@ export function RecommendationModal({ book, onClose, onPost, onChangeBook }: {
                 />
               </div>
 
-              <div className="recommend-field"><label className="recommend-label" htmlFor="quote"><span>Favorite line <small>(optional)</small></span></label><textarea id="quote" value={quote} onChange={(event) => setQuote(event.target.value)} placeholder="A line you want to pass along…" rows={2} />{suggestions.length > 0 && <div className="quote-suggestions"><MessageCircle size={15} aria-hidden="true" />{suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => setQuote(suggestion)}>{suggestion}</button>)}</div>}</div>
+              <div className="recommend-field"><label className="recommend-label" htmlFor="quote"><span>Favorite line <small>(optional)</small></span></label><textarea id="quote" value={quote} onChange={(event) => setQuote(event.target.value)} placeholder="A line you want to pass along…" rows={2} /></div>
 
               <div className="recommend-field"><label className="recommend-label" htmlFor="recommendation-note"><span>Why this book?</span><small>{note.length}/280</small></label><textarea id="recommendation-note" maxLength={280} value={note} onChange={(event) => { setNote(event.target.value); setError(""); }} placeholder="Tell the next reader what this book might give them…" rows={4} /></div>
 
@@ -179,8 +136,7 @@ export function RecommendationModal({ book, onClose, onPost, onChangeBook }: {
               {error && <p className="form-error" role="alert">{error}</p>}
             </div>
             <div className="recommend-footer"><button className="recommend-cancel" type="button" onClick={onClose}>Keep reading</button><button className="button button-primary recommend-submit" type="button" onClick={submit} disabled={sending}>{sending ? "Posting…" : "Post recommendation"} <Check size={17} aria-hidden="true" /></button></div>
-          </>
-        )}
+        </>
       </div>
     </div>,
     document.body,

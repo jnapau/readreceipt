@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, Bookmark, LogOut, UserRound, X } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
@@ -20,20 +20,33 @@ export function AccountModal({ open, onClose }: { open: boolean; onClose: () => 
   const [error, setError] = useState("");
   const supabase = useMemo(() => createClient(), []);
 
+  const loadShelf = useCallback(async (active: () => boolean = () => true) => {
+    if (!supabase) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!active()) return;
+    setUserId(user?.id ?? null);
+    if (!user) { setShelf([]); return; }
+    const { data, error: shelfError } = await supabase.from("shelves").select("id, books(id, open_library_key, title, author, cover_id, color, cover_url, genre)").order("created_at", { ascending: false });
+    if (shelfError) { setError("Your shelf couldn't be loaded. Please try again."); return; }
+    type BookRow = { id: string; open_library_key: string; title: string; author: string; cover_id: number | null; color: string; cover_url?: string | null; genre?: string | null };
+    const rows = (data ?? []) as unknown as Array<{ id: string; books: BookRow | BookRow[] | null }>;
+    if (!active()) return;
+    setShelf(rows.flatMap((row) => {
+      const related = Array.isArray(row.books) ? row.books : row.books ? [row.books] : [];
+      return related.map((book) => ({ id: book.id, key: book.open_library_key, title: book.title, author: book.author, coverId: book.cover_id ?? undefined, coverUrl: book.cover_url ?? undefined, genre: book.genre ?? undefined, color: book.color }));
+    }));
+  }, [supabase]);
+
   useEffect(() => {
     if (!open || !supabase) return;
     let active = true;
-    void (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!active) return;
-      setUserId(user?.id ?? null);
-      if (!user) { setShelf([]); return; }
-      const { data } = await supabase.from("shelves").select("id, books(id, open_library_key, title, author, cover_id, color)").order("created_at", { ascending: false });
-      const rows = (data ?? []) as unknown as Array<{ id: string; books: Array<{ id: string; open_library_key: string; title: string; author: string; cover_id: number | null; color: string }> | null }>;
-      if (active) setShelf(rows.flatMap((row) => (row.books ?? []).map((book) => ({ id: book.id, key: book.open_library_key, title: book.title, author: book.author, coverId: book.cover_id ?? undefined, color: book.color }))));
-    })();
-    return () => { active = false; };
-  }, [open, supabase]);
+    const isActive = () => active;
+    void loadShelf(isActive);
+    const refresh = () => { void loadShelf(isActive); };
+    window.addEventListener("rr:shelf-changed", refresh);
+    const { data: authListener } = supabase.auth.onAuthStateChange(refresh);
+    return () => { active = false; window.removeEventListener("rr:shelf-changed", refresh); authListener.subscription.unsubscribe(); };
+  }, [open, supabase, loadShelf]);
 
   useEffect(() => {
     if (!open) return;

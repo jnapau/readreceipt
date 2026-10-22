@@ -16,7 +16,7 @@ export function PostCard({ post, featured = false, onOpen, onRequestAuth, reveal
   /** Spoiler reveal state is owned by the page so it carries into the detail modal. */
   revealed: boolean;
   onToggleReveal: () => void;
-  /** Purr state — recommendations only. */
+  /** Anonymous purr state for this shared page. */
   purr?: PurrState;
 }) {
   const dedication = isDedication(post);
@@ -64,7 +64,7 @@ export function PostCard({ post, featured = false, onOpen, onRequestAuth, reveal
         <div className="post-footer">
           <span>From {post.from}</span>
           <span className="post-footer-actions">
-            {!dedication && purr && <PurrButton {...purr} compact />}
+            {purr && <PurrButton {...purr} compact />}
             <ShelfButton book={post.book} onRequestAuth={onRequestAuth} />
             <ShareStoryButton post={post} iconOnly />
           </span>

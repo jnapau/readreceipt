@@ -33,7 +33,7 @@ export const DEDICATION_RELATIONSHIPS = [
 export const isDedication = (post: SamplePost) => post.kind === "dedication";
 
 /** Presents a dedication in the shared feed-item shape. */
-export function dedicationToFeedItem(dedication: Dedication, createdAt?: string): SamplePost {
+export function dedicationToFeedItem(dedication: Dedication, createdAt = dedication.createdAt): SamplePost {
   return {
     id: dedication.id,
     kind: "dedication",
@@ -59,6 +59,7 @@ export type Dedication = {
   message: string;
   from: string;
   spoiler?: boolean;
+  createdAt?: string;
 };
 
 export const quoteSuggestions: Record<string, string[]> = {

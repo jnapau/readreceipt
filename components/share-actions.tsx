@@ -49,6 +49,29 @@ export function ShareStoryButton({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  const shareDirectly = async () => {
+    setSharing(true);
+    try {
+      const blob = await renderStoryImage(post);
+      const file = new File([blob], storyFileName(post), { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `${post.book.title} — Read Receipts`,
+          text: post.id ? noteUrl(post.id) : undefined,
+        });
+        return;
+      }
+      setOpen(true);
+    } catch (error) {
+      if ((error as DOMException)?.name !== "AbortError") setOpen(true);
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <>
       <button
@@ -56,15 +79,14 @@ export function ShareStoryButton({
         type="button"
         title="Share to Instagram Story"
         aria-label="Share to Instagram Story"
+        disabled={sharing}
         onClick={(event) => {
           event.stopPropagation();
-          // Copy inside the click gesture so Safari allows clipboard access.
-          if (post.id) void copyText(noteUrl(post.id)).then((ok) => { if (ok) showToast(STICKER_TOAST); });
-          setOpen(true);
+          void shareDirectly();
         }}
       >
         <InstagramIcon size={iconOnly ? 15 : 16} />
-        {!iconOnly && " Share"}
+        {!iconOnly && (sharing ? " Preparing…" : " Share")}
       </button>
       {open && <StorySheet post={post} onClose={() => setOpen(false)} />}
     </>

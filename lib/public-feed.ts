@@ -140,5 +140,6 @@ export async function fetchDedications(client: SupabaseClient, name: string): Pr
     message: row.note,
     from: row.sender_nickname,
     spoiler: row.spoiler,
+    createdAt: row.created_at,
   }));
 }

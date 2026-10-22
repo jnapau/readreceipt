@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bookmark, ChevronDown, Sparkles } from "lucide-react";
+import { Bookmark, ChevronDown } from "lucide-react";
 import { AccountModal } from "@/components/account-modal";
 import { CoverArt } from "@/components/cover-art";
 import { HeroControls } from "@/components/hero-controls";
@@ -91,7 +91,6 @@ export default function HomePage() {
   );
   const [dedications, setDedications] = useState<Dedication[]>(sampleDedications);
   const [feedMode, setFeedMode] = useState<"loading" | "sample" | "live" | "error">("loading");
-  const [feedFilter, setFeedFilter] = useState<"all" | "recommendations" | "dedications">("recommendations");
   const [detailPost, setDetailPost] = useState<SamplePost | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
 
@@ -120,6 +119,7 @@ export default function HomePage() {
             message: item.note,
             from: item.from,
             spoiler: item.spoiler,
+            createdAt: item.createdAt,
           }));
           setDedications(mappedDed);
         }
@@ -199,7 +199,7 @@ export default function HomePage() {
       from: dedication.from,
       spoiler: dedication.spoiler,
     });
-    const nextDed: Dedication = { ...dedication, id };
+    const nextDed: Dedication = { ...dedication, id, createdAt: new Date().toISOString() };
     setDedications((current) => [nextDed, ...current]);
     return id;
   };
@@ -217,19 +217,14 @@ export default function HomePage() {
     [dedications]
   );
 
-  // Filtered feed posts
+  // Keep every kind of page together, ordered by recency after the rotating top pick.
   const displayedPosts = useMemo(() => {
-    if (feedFilter === "recommendations") {
-      return orderedRecommendations.slice(1);
-    }
-    if (feedFilter === "dedications") {
-      return dedicationFeedItems;
-    }
-    // "all": Remaining recommendations + dedications
-    return [...orderedRecommendations.slice(1), ...dedicationFeedItems];
-  }, [feedFilter, orderedRecommendations, dedicationFeedItems]);
-
-  const showTopPick = feedFilter !== "dedications" && topPick;
+    return [...orderedRecommendations.slice(1), ...dedicationFeedItems].sort((a, b) => {
+      const aTime = a.createdAt ? Date.parse(a.createdAt) : 0;
+      const bTime = b.createdAt ? Date.parse(b.createdAt) : 0;
+      return bTime - aTime;
+    });
+  }, [orderedRecommendations, dedicationFeedItems]);
 
   return (
     <main>
@@ -295,59 +290,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Adaptive Feed Filtering: Tabs on Desktop/Tablet, Dropdown on Mobile */}
-        <div className="feed-filter-bar">
-          <div className="feed-filter-tabs" role="tablist" aria-label="Feed sections">
-            <button
-              className={`feed-filter-tab${feedFilter === "all" ? " feed-filter-tab-active" : ""}`}
-              type="button"
-              role="tab"
-              aria-selected={feedFilter === "all"}
-              onClick={() => setFeedFilter("all")}
-            >
-              All Pages
-              <span className="filter-count">{posts.length + dedications.length}</span>
-            </button>
-            <button
-              className={`feed-filter-tab${feedFilter === "recommendations" ? " feed-filter-tab-active" : ""}`}
-              type="button"
-              role="tab"
-              aria-selected={feedFilter === "recommendations"}
-              onClick={() => setFeedFilter("recommendations")}
-            >
-              Recommendations
-              <span className="filter-count">{posts.length}</span>
-            </button>
-            <button
-              className={`feed-filter-tab${feedFilter === "dedications" ? " feed-filter-tab-active" : ""}`}
-              type="button"
-              role="tab"
-              aria-selected={feedFilter === "dedications"}
-              onClick={() => setFeedFilter("dedications")}
-            >
-              Dedications
-              <span className="filter-badge-new">New</span>
-              <span className="filter-count">{dedications.length}</span>
-            </button>
-          </div>
-
-          <div className="feed-filter-dropdown-wrapper">
-            <label htmlFor="mobile-feed-filter" className="sr-only">Filter feed</label>
-            <select
-              id="mobile-feed-filter"
-              className="feed-filter-dropdown"
-              value={feedFilter}
-              onChange={(e) => setFeedFilter(e.target.value as "all" | "recommendations" | "dedications")}
-            >
-              <option value="all">All Pages ({posts.length + dedications.length})</option>
-              <option value="recommendations">Recommendations ({posts.length})</option>
-              <option value="dedications">Dedications · New ({dedications.length})</option>
-            </select>
-          </div>
-        </div>
-
         <div className="feed-grid">
-          {showTopPick && (
+          {topPick && (
             <PostCard
               post={topPick}
               featured
@@ -368,7 +312,6 @@ export default function HomePage() {
 
           {displayedPosts.map((post) => {
             const key = post.id ?? post.book.title;
-            const isRec = post.kind !== "dedication";
             return (
               <PostCard
                 post={post}
@@ -379,7 +322,7 @@ export default function HomePage() {
                 onToggleReveal={() => {
                   setRevealedMap((prev) => ({ ...prev, [key]: !prev[key] }));
                 }}
-                purr={isRec && post.id ? {
+                purr={post.id ? {
                   count: purrCounts[post.id] ?? samplePurrSeed(post.id),
                   purred: !!purredMap[post.id],
                   onPurr: () => handlePurr(post.id!),
@@ -399,7 +342,7 @@ export default function HomePage() {
           const key = detailPost.id ?? detailPost.book.title;
           setRevealedMap((prev) => ({ ...prev, [key]: !prev[key] }));
         }}
-        purr={detailPost && detailPost.kind !== "dedication" && detailPost.id ? {
+        purr={detailPost?.id ? {
           count: purrCounts[detailPost.id] ?? samplePurrSeed(detailPost.id),
           purred: !!purredMap[detailPost.id],
           onPurr: () => handlePurr(detailPost.id!),

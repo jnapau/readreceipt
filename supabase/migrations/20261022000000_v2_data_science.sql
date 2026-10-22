@@ -13,8 +13,10 @@ grant select (genre) on public.books to anon, authenticated;
 grant select (relationship) on public.posts to anon, authenticated;
 grant insert (relationship) on public.posts to anon, authenticated;
 
--- Recreate public_posts view with relationship exposed
-create or replace view public.public_posts as
+-- Recreate public_posts view with relationship exposed. PostgreSQL cannot
+-- insert a view column in the middle with CREATE OR REPLACE.
+drop view if exists public.public_posts;
+create view public.public_posts as
   select id, kind, book_id, rating, quote, note, recipient_name, relationship,
     sender_nickname, spoiler, created_at,
     lower(btrim(recipient_name)) as recipient_key

@@ -18,11 +18,9 @@ alter table public.purrs enable row level security;
 
 create policy "purrs are publicly countable"
   on public.purrs for select to anon, authenticated using (true);
-create policy "anyone can purr a recommendation"
+create policy "anyone can purr a page"
   on public.purrs for insert to anon, authenticated
-  with check (exists (
-    select 1 from public.posts p where p.id = post_id and p.kind = 'recommendation'
-  ));
+  with check (true);
 
 revoke all on public.purrs from anon, authenticated;
 grant select (post_id) on public.purrs to anon, authenticated;
@@ -48,11 +46,9 @@ alter table public.marginalia enable row level security;
 
 create policy "marginalia is publicly readable"
   on public.marginalia for select to anon, authenticated using (true);
-create policy "anyone can leave marginalia on a recommendation"
+create policy "anyone can leave marginalia on a page"
   on public.marginalia for insert to anon, authenticated
-  with check (exists (
-    select 1 from public.posts p where p.id = post_id and p.kind = 'recommendation'
-  ));
+  with check (true);
 
 revoke all on public.marginalia from anon, authenticated;
 grant select (id, post_id, nickname, body, created_at) on public.marginalia to anon, authenticated;

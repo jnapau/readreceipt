@@ -6,7 +6,7 @@ import { addMarginalia, cooldownRemaining, fetchMarginalia, MARGINALIA_MAX, sani
 
 const dateFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" });
 
-/** Reader notes penciled in the margins of a recommendation. */
+/** Reader notes penciled in the margins of any shared page. */
 export function Marginalia({ postId }: { postId: string }) {
   const fieldId = useId();
   const [notes, setNotes] = useState<Note[]>([]);

@@ -16,7 +16,7 @@ export function PostDetailModal({ post, onClose, revealed, onToggleReveal, purr 
   /** Spoiler reveal state, shared with the feed card so it never re-blurs. */
   revealed: boolean;
   onToggleReveal: () => void;
-  /** Purr state — only provided for recommendations. */
+  /** Anonymous purr state for this shared page. */
   purr?: PurrState;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -79,11 +79,11 @@ export function PostDetailModal({ post, onClose, revealed, onToggleReveal, purr 
               <div className="detail-actions">
                 <ShareStoryButton post={post} />
                 {post.id && <CopyLinkButton id={post.id} />}
-                {!dedication && purr && <PurrButton {...purr} />}
+                {purr && <PurrButton {...purr} />}
               </div>
             </div>
           </div>
-          {!dedication && post.id && <Marginalia postId={post.id} />}
+          {post.id && <Marginalia postId={post.id} />}
         </div>
       </div>
     </div>,
