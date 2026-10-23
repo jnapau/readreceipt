@@ -93,6 +93,7 @@ export default function HomePage() {
   const [feedMode, setFeedMode] = useState<"loading" | "sample" | "live" | "error">("loading");
   const [detailPost, setDetailPost] = useState<SamplePost | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [feedFilter, setFeedFilter] = useState<"all" | "recommendation" | "dedication">("recommendation");
 
   // Spoiler continuity across feed card and detail modal
   const [revealedMap, setRevealedMap] = useState<Record<string, boolean>>({});
@@ -217,14 +218,22 @@ export default function HomePage() {
     [dedications]
   );
 
-  // Keep every kind of page together, ordered by recency after the rotating top pick.
+  // Keep "All" chronological after the rotating top pick; the other views show one kind only.
   const displayedPosts = useMemo(() => {
-    return [...orderedRecommendations.slice(1), ...dedicationFeedItems].sort((a, b) => {
+    const candidates = feedFilter === "recommendation"
+      ? orderedRecommendations.slice(1)
+      : feedFilter === "dedication"
+        ? dedicationFeedItems
+        : [...orderedRecommendations.slice(1), ...dedicationFeedItems];
+
+    return [...candidates].sort((a, b) => {
       const aTime = a.createdAt ? Date.parse(a.createdAt) : 0;
       const bTime = b.createdAt ? Date.parse(b.createdAt) : 0;
       return bTime - aTime;
     });
-  }, [orderedRecommendations, dedicationFeedItems]);
+  }, [feedFilter, orderedRecommendations, dedicationFeedItems]);
+
+  const showTopPick = feedFilter !== "dedication" && !!topPick;
 
   return (
     <main>
@@ -290,8 +299,41 @@ export default function HomePage() {
           </div>
         </div>
 
+        <div className="feed-filter-bar" aria-label="Filter the newsfeed">
+          <div className="feed-filter-tabs" role="group" aria-label="Newsfeed categories">
+            {([
+              ["all", "All", posts.length + dedications.length],
+              ["recommendation", "Recommendation", posts.length],
+              ["dedication", "Dedication", dedications.length],
+            ] as const).map(([value, label, count]) => (
+              <button
+                className={`feed-filter-tab${feedFilter === value ? " feed-filter-tab-active" : ""}`}
+                type="button"
+                key={value}
+                aria-pressed={feedFilter === value}
+                onClick={() => setFeedFilter(value)}
+              >
+                {label} <span className="filter-count">{count}</span>
+              </button>
+            ))}
+          </div>
+          <div className="feed-filter-dropdown-wrapper">
+            <label className="sr-only" htmlFor="feed-filter">Newsfeed category</label>
+            <select
+              id="feed-filter"
+              className="feed-filter-dropdown"
+              value={feedFilter}
+              onChange={(event) => setFeedFilter(event.target.value as "all" | "recommendation" | "dedication")}
+            >
+              <option value="all">All ({posts.length + dedications.length})</option>
+              <option value="recommendation">Recommendation ({posts.length})</option>
+              <option value="dedication">Dedication ({dedications.length})</option>
+            </select>
+          </div>
+        </div>
+
         <div className="feed-grid">
-          {topPick && (
+          {showTopPick && topPick && (
             <PostCard
               post={topPick}
               featured
