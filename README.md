@@ -1,64 +1,95 @@
 # Read Receipts
 
-An anonymous home for book recommendations and dedications. This repository is being built in six reviewable stages.
+An anonymous social reading journal for recommending books, dedicating them to someone, and leaving small notes in the margins.
 
-## Run the current preview locally
+**[Visit the live site](https://rreceipt.vercel.app/)**
 
-You need Node.js 20.9 or newer. From this folder:
+## What it does
+
+- Publishes anonymous book recommendations with quotes, notes, spoiler controls, genres, and 1–5 cat ratings.
+- Creates personal book dedications with an optional recipient relationship.
+- Combines both formats in a newest-first feed with dedicated category views and a rotating Top Pick.
+- Adds account-free, once-per-device purrs and public marginalia to every entry.
+- Lets optional account holders keep a private book shelf.
+- Generates a share-ready 9:16 image for Instagram Stories.
+- Exports public-safe data as CSV or JSON for analysis.
+
+## Product decisions
+
+Read Receipts is designed to keep participation lightweight. Posting, reacting, and commenting do not require an account; authentication exists only for the private shelf. Public database reads expose post content without linking it to a user identity. The interface keeps recommendations and dedications in one editorial system while still making each format easy to browse.
+
+## Stack
+
+- **Next.js 16 App Router** and **React 19**
+- **TypeScript**
+- **Tailwind CSS 4** with a custom editorial design layer
+- **Supabase** for PostgreSQL, Auth, row-level security, and the public feed
+- **Open Library** for book search and cover metadata
+- **Vercel** for production hosting
+
+## Project structure
+
+```text
+app/                  Pages, global styles, and API routes
+components/           Forms, feed cards, interactions, and account UI
+lib/                  Feed queries, Supabase clients, data models, and utilities
+scripts/              Synthetic analytics dataset generator
+supabase/migrations/  Reproducible schema, policies, and feature migrations
+proxy.ts              Supabase authentication session refresh
+```
+
+## Run locally
+
+Requirements: Node.js 20.9 or newer and a Supabase project.
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The homepage shows illustrative recommendations until a reader posts the first real one. **Recommend** and **Dedicate** use live Open Library search and save to Supabase. Recipient search finds exact names while ignoring capitalization. **My Shelf** supports private username and password accounts.
+On Windows PowerShell, replace the copy command with:
 
-## Why this stack
-
-- **Next.js App Router** organizes the app by pages and layouts. It can render public book pages quickly and later host server-side operations without a separate backend project.
-- **TypeScript** catches common mistakes while editing, such as passing the wrong kind of book data to a component.
-- **Tailwind CSS** provides reusable styling utilities. The Stage 1 design also uses a small global stylesheet for the editorial collage and motion.
-- **Supabase** stores posts and private shelves in PostgreSQL and handles optional accounts. Public post data is separated from account identities.
-- **Vercel** builds and hosts the Next.js app from this repository.
-
-The `app/` folder holds pages, the shared layout, and a small `/api/books/search` route that asks Open Library for books. `components/` holds reusable visual pieces. `lib/sample-data.ts` supplies illustrative recommendations for an empty feed; `lib/public-feed.ts` loads real posts and dedications.
-
-### Supabase setup
-
-Copy `.env.example` to `.env.local` and add the publishable key from the Supabase project settings. Stage 5 includes the schema in `supabase/migrations/20261019000000_stage5.sql`; it creates private profiles, public-safe posts, book metadata, and per-user shelves with row-level security. For username-only accounts, turn off **Confirm email** under Authentication → Sign In / Providers. Supabase Auth stores an internal email-shaped identifier derived from each username; users do not enter an email address. This means email-based password recovery is unavailable.
-
-The Stage 6 migration in `supabase/migrations/20261019055746_stage6_public_feed.sql` adds public-safe feed reads and a Top Pick view. Top Pick counts recommendations made before the current three-day window, so it changes at most once per window. While there is no older history, it uses the latest recommendation.
-
-### Analytics data
-
-The deployed app exposes public-safe feed data with `genre` and dedication `relationship` already flattened into analysis-ready rows:
-
-- JSON: [`/api/export`](https://rreceipt.vercel.app/api/export)
-- CSV download: [`/api/export?format=csv`](https://rreceipt.vercel.app/api/export?format=csv)
-
-The CSV opens directly in Excel, Google Sheets, pandas, or R. Recommendation rows have a blank `relationship`; dedication rows have a blank `rating`. A missing dedication relationship is exported as `unspecified`, so it remains measurable instead of being confused with recommendation data.
-
-To generate synthetic data locally without changing the production database:
-
-```bash
-# 500 rows (default)
-npm run generate:data
-
-# Choose a row count, up to 100,000
-npm run generate:data -- 5000
+```powershell
+Copy-Item .env.example .env.local
 ```
 
-This writes matching CSV and JSON files such as `read_receipts_synthetic_5000.csv` and `read_receipts_synthetic_5000.json`. The generator uses weighted genres, relationship types, ratings, and timestamps so it is useful for dashboards and data-science experiments, but it should not be presented as real user behavior.
+Set these values in `.env.local`:
 
-### Vercel deployment
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+```
 
-Import this GitHub repository as a **Next.js** project. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to Production, Preview, and Development environments using the same values as `.env.local`. Do not add a Supabase secret or service-role key. The build command is `npm run build`.
+Apply the SQL files in `supabase/migrations/` in filename order. For username-only shelf accounts, disable **Confirm email** in Supabase Authentication settings. No service-role key is used by the application.
 
-## Planned stages
+Useful commands:
 
-1. Homepage, fonts, hero collage, sample feed — complete.
-2. Open Library search modal and book fallback spines — **ready for review**.
-3. Recommendation form, quote suggestions, live feed, spoiler reveal — **ready for review**.
-4. Dedication form and exact, case-insensitive recipient search — complete.
-5. Supabase tables, optional accounts, and My Shelf — **ready for review**.
-6. Top Pick rotation, mobile polish, and Vercel preparation — complete.
+```bash
+npm run dev          # local development
+npm run typecheck    # TypeScript validation
+npm run build        # production build
+npm run start        # serve the production build
+```
+
+## Analytics data
+
+The production export is generated from the latest public feed whenever the endpoint is requested:
+
+- [Download CSV](https://rreceipt.vercel.app/api/export?format=csv)
+- [View JSON](https://rreceipt.vercel.app/api/export)
+
+Each row includes the entry type, book metadata, genre, rating, note length, recipient relationship, spoiler flag, and submission time. Private account and shelf data are excluded.
+
+For experiments that should not touch production, generate a synthetic dataset locally:
+
+```bash
+npm run generate:data           # 500 rows
+npm run generate:data -- 5000   # custom size, up to 100,000 rows
+```
+
+The command writes matching CSV and JSON files, which are ignored by Git.
+
+## Deployment
+
+Import the repository as a Next.js project in Vercel, add the two public Supabase environment variables, and deploy. The production build command is `npm run build`.

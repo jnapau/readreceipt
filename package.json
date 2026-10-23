@@ -1,7 +1,11 @@
 {
   "name": "read-receipts",
   "version": "0.1.0",
+  "description": "An anonymous social reading journal for book recommendations and dedications.",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

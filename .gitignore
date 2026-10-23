@@ -7,3 +7,4 @@ out/
 supabase/.temp/
 *.csv
 *synthetic*.json
+preview*.png
