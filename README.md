@@ -38,38 +38,14 @@ supabase/migrations/  Reproducible schema, policies, and feature migrations
 proxy.ts              Supabase authentication session refresh
 ```
 
-## Run locally
+## Development
 
-Requirements: Node.js 20.9 or newer and a Supabase project.
+Requires Node.js 20.9+ and a Supabase project. Copy `.env.example` to `.env.local`, add the two public Supabase values, and apply `supabase/migrations/` in filename order.
 
 ```bash
 npm install
-cp .env.example .env.local
 npm run dev
-```
-
-On Windows PowerShell, replace the copy command with:
-
-```powershell
-Copy-Item .env.example .env.local
-```
-
-Set these values in `.env.local`:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
-```
-
-Apply the SQL files in `supabase/migrations/` in filename order. For username-only shelf accounts, disable **Confirm email** in Supabase Authentication settings. No service-role key is used by the application.
-
-Useful commands:
-
-```bash
-npm run dev          # local development
-npm run typecheck    # TypeScript validation
-npm run build        # production build
-npm run start        # serve the production build
+npm run build
 ```
 
 ## Analytics data
