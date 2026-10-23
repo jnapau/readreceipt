@@ -218,13 +218,14 @@ export default function HomePage() {
     [dedications]
   );
 
-  // Keep "All" chronological after the rotating top pick; the other views show one kind only.
+  // Every view is strictly newest-first. The rotating Top Pick keeps its visual treatment
+  // without displacing newer reader submissions.
   const displayedPosts = useMemo(() => {
     const candidates = feedFilter === "recommendation"
-      ? orderedRecommendations.slice(1)
+      ? orderedRecommendations
       : feedFilter === "dedication"
         ? dedicationFeedItems
-        : [...orderedRecommendations.slice(1), ...dedicationFeedItems];
+        : [...orderedRecommendations, ...dedicationFeedItems];
 
     return [...candidates].sort((a, b) => {
       const aTime = a.createdAt ? Date.parse(a.createdAt) : 0;
@@ -232,8 +233,6 @@ export default function HomePage() {
       return bTime - aTime;
     });
   }, [feedFilter, orderedRecommendations, dedicationFeedItems]);
-
-  const showTopPick = feedFilter !== "dedication" && !!topPick;
 
   return (
     <main>
@@ -333,31 +332,14 @@ export default function HomePage() {
         </div>
 
         <div className="feed-grid">
-          {showTopPick && topPick && (
-            <PostCard
-              post={topPick}
-              featured
-              onOpen={() => setDetailPost(topPick)}
-              onRequestAuth={() => setAccountOpen(true)}
-              revealed={!!revealedMap[topPick.id ?? topPick.book.title]}
-              onToggleReveal={() => {
-                const key = topPick.id ?? topPick.book.title;
-                setRevealedMap((prev) => ({ ...prev, [key]: !prev[key] }));
-              }}
-              purr={topPick.id ? {
-                count: purrCounts[topPick.id] ?? samplePurrSeed(topPick.id),
-                purred: !!purredMap[topPick.id],
-                onPurr: () => handlePurr(topPick.id!),
-              } : undefined}
-            />
-          )}
-
           {displayedPosts.map((post) => {
             const key = post.id ?? post.book.title;
+            const isTopPick = post.kind === "recommendation" && key === (topPick?.id ?? topPick?.book.title);
             return (
               <PostCard
                 post={post}
                 key={key}
+                featured={isTopPick}
                 onOpen={() => setDetailPost(post)}
                 onRequestAuth={() => setAccountOpen(true)}
                 revealed={!!revealedMap[key]}
