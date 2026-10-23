@@ -55,7 +55,7 @@ The production export is generated from the latest public feed whenever the endp
 - [Download CSV](https://rreceipt.vercel.app/api/export?format=csv)
 - [View JSON](https://rreceipt.vercel.app/api/export)
 
-Each row includes the entry type, book metadata, genre, rating, note length, recipient relationship, spoiler flag, and submission time. Private account and shelf data are excluded.
+Each row includes the entry type, book metadata, genre, rating, note length, recipient relationship, authentic purr count, spoiler flag, and submission time. Private account and shelf data are excluded.
 
 For experiments that should not touch production, generate a synthetic dataset locally:
 

@@ -86,16 +86,9 @@ function rememberPurr(id: string) {
   writeJson(PURRED_KEY, { ...readPurred(), [id]: true });
 }
 
-/** A small, stable starting tally so sample notes feel lived-in. */
-export function samplePurrSeed(id: string) {
-  let hash = 0;
-  for (const character of id) hash = (hash * 33 + character.charCodeAt(0)) | 0;
-  return 4 + (Math.abs(hash) % 21);
-}
-
 /**
  * Returns purr tallies for stored notes, or null when the archive (or the
- * purrs table) is unavailable so callers can fall back to local state.
+ * purrs table) is unavailable.
  */
 export async function fetchPurrCounts(client: SupabaseClient, ids: string[]): Promise<Record<string, number> | null> {
   const stored = ids.filter(isStoredNote);
@@ -107,15 +100,23 @@ export async function fetchPurrCounts(client: SupabaseClient, ids: string[]): Pr
   return counts;
 }
 
-/** Records a purr. Always remembers it locally; persists to Supabase when possible. */
+/** Records a purr and reports whether Supabase inserted or de-duplicated it. */
 export async function givePurr(id: string) {
-  rememberPurr(id);
-  if (!isStoredNote(id)) return;
+  if (!isStoredNote(id)) return "failed" as const;
   const client = createClient();
-  if (!client) return;
+  if (!client) return "failed" as const;
   const { error } = await client.from("purrs").insert({ post_id: id, client_id: getClientId() });
-  // 23505 = already purred from this browser; anything else is a soft failure we tolerate.
-  if (error && error.code !== "23505") console.warn("Purr could not be saved:", error.message);
+  if (!error) {
+    rememberPurr(id);
+    return "inserted" as const;
+  }
+  // 23505 = this anonymous browser id already purred this page.
+  if (error.code === "23505") {
+    rememberPurr(id);
+    return "duplicate" as const;
+  }
+  console.warn("Purr could not be saved:", error.message);
+  return "failed" as const;
 }
 
 /* ------------------------------------------------------------------ */

@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   const format = url.searchParams.get("format") || "json";
 
   let posts: SamplePost[] = [];
+  const purrCounts: Record<string, number> = {};
   const client = createClient();
   if (client) {
     try {
@@ -31,6 +32,21 @@ export async function GET(request: Request) {
     ];
   }
 
+  if (client) {
+    const storedIds = posts
+      .map((post) => post.id)
+      .filter((id): id is string => !!id && /^[0-9a-f-]{36}$/i.test(id));
+    if (storedIds.length) {
+      const { data } = await client
+        .from("purr_counts")
+        .select("post_id,purrs")
+        .in("post_id", storedIds);
+      for (const row of (data ?? []) as { post_id: string; purrs: number }[]) {
+        purrCounts[row.post_id] = Number(row.purrs) || 0;
+      }
+    }
+  }
+
   const dataset = posts.map((item, index) => {
     const isDedication = item.kind === "dedication";
     return {
@@ -46,6 +62,7 @@ export async function GET(request: Request) {
       from_sender: item.from,
       recipient: isDedication ? (item.recipient || "") : null,
       relationship: isDedication ? (item.relationship || "unspecified") : null,
+      purrs: item.id ? (purrCounts[item.id] ?? 0) : 0,
       has_spoiler: !!item.spoiler,
       created_at: item.createdAt || new Date(Date.now() - index * 86400000).toISOString(),
     };
@@ -65,6 +82,7 @@ export async function GET(request: Request) {
       "from_sender",
       "recipient",
       "relationship",
+      "purrs",
       "has_spoiler",
       "created_at",
     ];
@@ -82,6 +100,7 @@ export async function GET(request: Request) {
       sanitizeCsv(row.from_sender),
       sanitizeCsv(row.recipient),
       sanitizeCsv(row.relationship),
+      sanitizeCsv(row.purrs),
       sanitizeCsv(row.has_spoiler),
       sanitizeCsv(row.created_at),
     ].join(","));

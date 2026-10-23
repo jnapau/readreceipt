@@ -14,7 +14,7 @@ import type { Dedication, SamplePost } from "@/lib/sample-data";
 import type { Book } from "@/lib/books";
 import { createClient } from "@/lib/supabase/client";
 import { fetchFeed, fetchNoteById } from "@/lib/public-feed";
-import { fetchPurrCounts, givePurr, readPurred, samplePurrSeed } from "@/lib/interactions";
+import { fetchPurrCounts, givePurr, readPurred } from "@/lib/interactions";
 
 async function persistPost(
   kind: "recommendation" | "dedication",
@@ -205,11 +205,14 @@ export default function HomePage() {
     return id;
   };
 
-  const handlePurr = (id: string) => {
+  const handlePurr = async (id: string) => {
     if (purredMap[id]) return;
+    const result = await givePurr(id);
+    if (result === "failed") return;
     setPurredMap((prev) => ({ ...prev, [id]: true }));
-    setPurrCounts((prev) => ({ ...prev, [id]: (prev[id] ?? samplePurrSeed(id)) + 1 }));
-    void givePurr(id);
+    if (result === "inserted") {
+      setPurrCounts((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+    }
   };
 
   // Dedications converted to feed items
@@ -347,7 +350,7 @@ export default function HomePage() {
                   setRevealedMap((prev) => ({ ...prev, [key]: !prev[key] }));
                 }}
                 purr={post.id ? {
-                  count: purrCounts[post.id] ?? samplePurrSeed(post.id),
+                  count: purrCounts[post.id] ?? 0,
                   purred: !!purredMap[post.id],
                   onPurr: () => handlePurr(post.id!),
                 } : undefined}
@@ -367,7 +370,7 @@ export default function HomePage() {
           setRevealedMap((prev) => ({ ...prev, [key]: !prev[key] }));
         }}
         purr={detailPost?.id ? {
-          count: purrCounts[detailPost.id] ?? samplePurrSeed(detailPost.id),
+          count: purrCounts[detailPost.id] ?? 0,
           purred: !!purredMap[detailPost.id],
           onPurr: () => handlePurr(detailPost.id!),
         } : undefined}
