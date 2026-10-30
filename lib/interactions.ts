@@ -66,13 +66,20 @@ export async function fetchPurrCounts(client: SupabaseClient, ids: string[]): Pr
   const stored = ids.filter(isStoredNote);
   if (!stored.length) return {};
   
-  // For larger sets, fetch all purr counts directly to avoid oversized query string URLs
+  // For larger sets, fetch all purr counts directly with pagination to avoid oversized query string URLs
   if (stored.length > 100) {
-    const { data, error } = await client.from("purr_counts").select("post_id,purrs");
-    if (error) return null;
     const counts: Record<string, number> = {};
-    for (const row of (data ?? []) as { post_id: string; purrs: number }[]) {
-      counts[row.post_id] = Number(row.purrs) || 0;
+    for (let start = 0; ; start += 1000) {
+      const { data, error } = await client
+        .from("purr_counts")
+        .select("post_id,purrs")
+        .range(start, start + 999);
+      if (error) return null;
+      if (!data || !data.length) break;
+      for (const row of (data ?? []) as { post_id: string; purrs: number }[]) {
+        counts[row.post_id] = Math.min(231, Number(row.purrs) || 0);
+      }
+      if (data.length < 1000) break;
     }
     return counts;
   }
@@ -88,7 +95,7 @@ export async function fetchPurrCounts(client: SupabaseClient, ids: string[]): Pr
   for (const { data, error } of results) {
     if (error) return null;
     for (const row of (data ?? []) as { post_id: string; purrs: number }[]) {
-      counts[row.post_id] = Number(row.purrs) || 0;
+      counts[row.post_id] = Math.min(231, Number(row.purrs) || 0);
     }
   }
   return counts;

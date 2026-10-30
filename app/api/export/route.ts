@@ -41,16 +41,22 @@ export async function GET(request: Request) {
     try {
       const client = createClient(supabaseUrl, supabaseKey);
 
-      // Fetch all books and purr counts in parallel with the first page of posts
-      const [booksRes, purrsRes] = await Promise.all([
-        client.from("books").select("id,title,author,genre"),
-        client.from("purr_counts").select("post_id,purrs"),
-      ]);
+      // Fetch all books
+      const { data: booksData } = await client.from("books").select("id,title,author,genre");
+      const booksMap = new Map((booksData || []).map((b) => [b.id, b]));
 
-      const booksMap = new Map((booksRes.data || []).map((b) => [b.id, b]));
+      // Fetch all purr counts with pagination
       const purrCounts: Record<string, number> = {};
-      for (const row of purrsRes.data || []) {
-        purrCounts[row.post_id] = Number(row.purrs) || 0;
+      for (let pStart = 0; ; pStart += 1000) {
+        const { data: pData, error: pErr } = await client
+          .from("purr_counts")
+          .select("post_id,purrs")
+          .range(pStart, pStart + 999);
+        if (pErr || !pData || !pData.length) break;
+        for (const row of pData) {
+          purrCounts[row.post_id] = Math.min(231, Number(row.purrs) || 0);
+        }
+        if (pData.length < 1000) break;
       }
 
       // Fetch all posts with pagination
