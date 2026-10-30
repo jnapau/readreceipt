@@ -65,9 +65,21 @@ function rememberPurr(id: string) {
 export async function fetchPurrCounts(client: SupabaseClient, ids: string[]): Promise<Record<string, number> | null> {
   const stored = ids.filter(isStoredNote);
   if (!stored.length) return {};
+  
+  // For larger sets, fetch all purr counts directly to avoid oversized query string URLs
+  if (stored.length > 100) {
+    const { data, error } = await client.from("purr_counts").select("post_id,purrs");
+    if (error) return null;
+    const counts: Record<string, number> = {};
+    for (const row of (data ?? []) as { post_id: string; purrs: number }[]) {
+      counts[row.post_id] = Number(row.purrs) || 0;
+    }
+    return counts;
+  }
+
   const chunks: string[][] = [];
-  for (let i = 0; i < stored.length; i += PURR_CHUNK_SIZE) {
-    chunks.push(stored.slice(i, i + PURR_CHUNK_SIZE));
+  for (let i = 0; i < stored.length; i += 50) {
+    chunks.push(stored.slice(i, i + 50));
   }
   const counts: Record<string, number> = {};
   const results = await Promise.all(
