@@ -32,7 +32,6 @@ Read Receipts is designed to keep participation lightweight. Posting, reacting, 
 app/                  Pages, global styles, and API routes
 components/           Forms, feed cards, interactions, and account UI
 lib/                  Feed queries, Supabase clients, data models, and utilities
-scripts/              Synthetic analytics dataset generator
 supabase/migrations/  Reproducible schema, policies, and feature migrations
 proxy.ts              Supabase authentication session refresh
 ```
@@ -47,23 +46,14 @@ npm run dev
 npm run build
 ```
 
-## Analytics data
+## Community data export
 
-The production export is generated from the latest public feed whenever the endpoint is requested:
+The production export provides public feed data submitted by readers:
 
 - [Download CSV](https://rreceipt.vercel.app/api/export?format=csv)
 - [View JSON](https://rreceipt.vercel.app/api/export)
 
-Each row includes the entry type, book metadata, genre, rating, note length, recipient relationship, authentic purr count, spoiler flag, and submission time. Private account and shelf data are excluded.
-
-For experiments that should not touch production, generate a synthetic dataset locally:
-
-```bash
-npm run generate:data           # 500 rows
-npm run generate:data -- 5000   # custom size, up to 100,000 rows
-```
-
-The command writes matching CSV and JSON files, which are ignored by Git.
+Each row includes the entry type, book metadata, genre, rating, note length, recipient relationship, purr count, spoiler flag, and submission time. Private account and shelf data are excluded.
 
 ## Deployment
 

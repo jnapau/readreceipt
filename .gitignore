@@ -6,5 +6,4 @@ out/
 *.tsbuildinfo
 supabase/.temp/
 *.csv
-*synthetic*.json
 preview*.png
