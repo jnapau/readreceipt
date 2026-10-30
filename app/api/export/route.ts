@@ -1,7 +1,8 @@
-import { createClient } from "@/lib/supabase/client";
-import { fetchPurrCounts } from "@/lib/interactions";
-import { fetchFeed } from "@/lib/public-feed";
-import { samplePosts, sampleDedications, dedicationToFeedItem, type SamplePost } from "@/lib/sample-data";
+import { createClient } from "@supabase/supabase-js";
+import { samplePosts, sampleDedications, dedicationToFeedItem } from "@/lib/sample-data";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function sanitizeCsv(val: unknown): string {
   if (val === null || val === undefined) return "";
@@ -9,64 +10,120 @@ function sanitizeCsv(val: unknown): string {
   return `"${str}"`;
 }
 
+type ExportRow = {
+  post_id: string;
+  kind: string;
+  book_title: string;
+  book_author: string;
+  genre: string;
+  rating: number | null;
+  quote: string;
+  note: string;
+  note_length: number;
+  from_sender: string;
+  recipient: string | null;
+  relationship: string | null;
+  purrs: number;
+  has_spoiler: boolean;
+  created_at: string;
+};
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const format = url.searchParams.get("format") || "json";
 
-  let posts: SamplePost[] = [];
-  let purrCounts: Record<string, number> = {};
-  const client = createClient();
-  if (client) {
+  let dataset: ExportRow[] = [];
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (supabaseUrl && supabaseKey) {
     try {
-      const feed = await fetchFeed(client);
-      posts = [...feed.posts, ...feed.dedications].sort((a, b) => {
-        const aTime = a.createdAt ? Date.parse(a.createdAt) : 0;
-        const bTime = b.createdAt ? Date.parse(b.createdAt) : 0;
-        return bTime - aTime;
-      });
-    } catch {
-      posts = [];
+      const client = createClient(supabaseUrl, supabaseKey);
+
+      // Fetch all books and purr counts in parallel with the first page of posts
+      const [booksRes, purrsRes] = await Promise.all([
+        client.from("books").select("id,title,author,genre"),
+        client.from("purr_counts").select("post_id,purrs"),
+      ]);
+
+      const booksMap = new Map((booksRes.data || []).map((b) => [b.id, b]));
+      const purrCounts: Record<string, number> = {};
+      for (const row of purrsRes.data || []) {
+        purrCounts[row.post_id] = Number(row.purrs) || 0;
+      }
+
+      // Fetch all posts with pagination
+      const PAGE_SIZE = 1000;
+      const allPosts: any[] = [];
+      for (let start = 0; ; start += PAGE_SIZE) {
+        const { data, error } = await client
+          .from("public_posts")
+          .select("id,kind,book_id,rating,quote,note,recipient_name,relationship,sender_nickname,spoiler,created_at")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(start, start + PAGE_SIZE - 1);
+
+        if (error || !data || !data.length) break;
+        allPosts.push(...data);
+        if (data.length < PAGE_SIZE) break;
+      }
+
+      if (allPosts.length > 0) {
+        dataset = allPosts.map((row, index) => {
+          const book = booksMap.get(row.book_id) || { title: "Unknown", author: "Unknown", genre: "Uncategorized" };
+          const isDedication = row.kind === "dedication";
+          return {
+            post_id: row.id,
+            kind: row.kind,
+            book_title: book.title,
+            book_author: book.author,
+            genre: book.genre || "Uncategorized",
+            rating: isDedication ? null : (row.rating ?? 0),
+            quote: row.quote || "",
+            note: row.note || "",
+            note_length: (row.note || "").length,
+            from_sender: row.sender_nickname,
+            recipient: isDedication ? (row.recipient_name || "") : null,
+            relationship: isDedication ? (row.relationship || "unspecified") : null,
+            purrs: purrCounts[row.id] ?? 0,
+            has_spoiler: !!row.spoiler,
+            created_at: row.created_at || new Date(Date.now() - index * 86400000).toISOString(),
+          };
+        });
+      }
+    } catch (e) {
+      console.error("Export API error fetching from Supabase:", e);
     }
   }
 
-  // Fallback to sample data if no live data is found
-  if (posts.length === 0) {
-    posts = [
+  // Fallback to sample data if no database data
+  if (dataset.length === 0) {
+    const fallbackItems = [
       ...samplePosts,
       ...sampleDedications.map((d) => dedicationToFeedItem(d)),
     ];
+    dataset = fallbackItems.map((item, index) => {
+      const isDedication = item.kind === "dedication";
+      return {
+        post_id: item.id || `sample-${index + 1}`,
+        kind: item.kind || "recommendation",
+        book_title: item.book.title,
+        book_author: item.book.author,
+        genre: item.book.genre || item.genre || "Uncategorized",
+        rating: isDedication ? null : item.rating,
+        quote: item.quote || "",
+        note: item.note || "",
+        note_length: (item.note || "").length,
+        from_sender: item.from,
+        recipient: isDedication ? (item.recipient || "") : null,
+        relationship: isDedication ? (item.relationship || "unspecified") : null,
+        purrs: 0,
+        has_spoiler: !!item.spoiler,
+        created_at: item.createdAt || new Date(Date.now() - index * 86400000).toISOString(),
+      };
+    });
   }
-
-  if (client) {
-    const storedIds = posts
-      .map((post) => post.id)
-      .filter((id): id is string => !!id && /^[0-9a-f-]{36}$/i.test(id));
-    if (storedIds.length) {
-      const fetched = await fetchPurrCounts(client, storedIds);
-      if (fetched) purrCounts = fetched;
-    }
-  }
-
-  const dataset = posts.map((item, index) => {
-    const isDedication = item.kind === "dedication";
-    return {
-      post_id: item.id || `sample-${index + 1}`,
-      kind: item.kind || "recommendation",
-      book_title: item.book.title,
-      book_author: item.book.author,
-      genre: item.book.genre || item.genre || "Uncategorized",
-      rating: isDedication ? null : item.rating,
-      quote: item.quote || "",
-      note: item.note || "",
-      note_length: (item.note || "").length,
-      from_sender: item.from,
-      recipient: isDedication ? (item.recipient || "") : null,
-      relationship: isDedication ? (item.relationship || "unspecified") : null,
-      purrs: item.id ? (purrCounts[item.id] ?? 0) : 0,
-      has_spoiler: !!item.spoiler,
-      created_at: item.createdAt || new Date(Date.now() - index * 86400000).toISOString(),
-    };
-  });
 
   if (format === "csv") {
     const headers = [
