@@ -1,452 +1,363 @@
 import { createClient } from "@supabase/supabase-js";
+import { BOOKS } from "./seed-books.mjs";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://pmrcizghnvjpawkzawej.supabase.co";
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_PeuFFl5qLIgTWlubzIfxWQ_hwUJaT97";
-
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const RELATIONSHIPS = ["lover", "situationship", "ex", "friend", "bff", "crush", "family", null];
-const RELATIONSHIP_WEIGHTS = [0.20, 0.18, 0.16, 0.18, 0.12, 0.08, 0.06, 0.02];
+const DRY_RUN = process.argv.includes("--dry");
+const COUNT = Number.parseInt(process.argv.find((a) => /^\d+$/.test(a)) || "1238", 10);
 
-const RECIPIENTS = [
-  "Julian", "Elena", "Clara", "Matteo", "Maya", "Theo", "Sophie", "Noah",
-  "Camille", "Leo", "Aria", "Ethan", "Grace", "Sam", "Isla", "Oliver",
-  "Hannah", "Gabriel", "Zoe", "Felix", "Maeve", "Lucas", "Sasha", "Nico",
-  "Ren", "Beatrice", "Daniel", "Chloe", "Arthur", "Mina", "Rowan", "Miles",
-  "Iris", "Jonah", "Tessa", "Eli", "Vera", "Liam", "Nora", "Caleb", "Silas",
-  "Freya", "Tobias", "Lyra", "Jasper", "Willa", "Ezra", "Ingrid", "Jude"
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const chance = (p) => Math.random() < p;
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const weighted = (items, weights) => {
+  let r = Math.random() * weights.reduce((x, y) => x + y, 0);
+  for (let i = 0; i < items.length; i++) { if ((r -= weights[i]) <= 0) return items[i]; }
+  return items[items.length - 1];
+};
+
+const NAMES = [
+  "Julian", "Elena", "Clara", "Matteo", "Maya", "Theo", "Sophie", "Noah", "Camille", "Leo", "Aria", "Ethan",
+  "Grace", "Sam", "Isla", "Oliver", "Hannah", "Gabriel", "Zoe", "Felix", "Maeve", "Lucas", "Sasha", "Nico",
+  "Ren", "Beatrice", "Daniel", "Chloe", "Arthur", "Mina", "Rowan", "Miles", "Iris", "Jonah", "Tessa", "Eli",
+  "Vera", "Liam", "Nora", "Caleb", "Freya", "Jude", "Migs", "Bea", "Pia", "Jao", "Kat", "Paolo", "Andrea",
+  "Gab", "Janine", "Carlo", "Tricia", "Enzo", "Bianca", "Marco", "Ysa", "Luis", "Kim", "Ana", "Joaquin",
+  "Rafa", "Althea", "Miggy", "Danielle", "Kiko", "Gelo", "Ines", "Rocco", "Kaye", "Anton", "Celine", "Dom"
 ];
 
 const SENDERS = [
-  "an anonymous reader",
-  "someone who stayed too long",
-  "a fellow overthinker",
-  "the girl from the morning train",
-  "the boy by the window",
-  "M. in 4B",
-  "someone who owes you an apology",
-  "your favorite disaster",
-  "a quiet admirer",
-  "someone who still has your copy",
-  "an insomniac",
-  "the one who kept the receipts",
-  "someone who remembers the summer",
-  "a stranger on the subway",
-  "J.", "K.", "A.", "E.", "S.", "R.", "L.",
-  "the person who should have called",
-  "someone learning how to stay",
-  "a friend who misses you",
-  "the girl in the corduroy coat",
-  "someone who never forgot",
-  "the reader with cold hands",
-  "a night shift regular",
-  "someone halfway across the country"
+  "an anonymous reader", "an anonymous reader", "an anonymous reader", "an anonymous reader",
+  "someone who stayed too long", "a fellow overthinker", "the girl from the morning train", "your roommate",
+  "the one who borrowed your umbrella", "someone who still has your copy", "an insomniac", "you know who",
+  "m.", "j", "k.", "a", "e.", "r.", "the one in the yellow raincoat", "your seatmate", "a quiet admirer",
+  "the person who should have called", "your favorite disaster", "a friend who misses you", "me, obviously",
+  "someone halfway across the country", "the night shift", "your ex-lab partner", "a former bookworm",
+  "the girl with the tote bag", "bookstore regular", "someone learning how to stay", "your older sister",
+  "the kid from 4B", "lowkey", "an old friend", "the one who lent you a pen", "anon", "anon", "a stranger",
+  "someone on the 10pm commute", "a coffee shop regular", "the one who listened", "the boy in the grey hoodie",
+  "an old classmate", "someone who kept the ticket stubs", "a tired grad student", "your favorite headache"
 ];
 
-const BOOK_LORE = {
-  "Babel: An Arcane History": {
-    quotes: [
-      "Translation is not a mirror; it is an act of betrayal.",
-      "That is what language does: it covers the wound, but the blood still seeps through.",
-      "We were boys who believed Oxford could love us back.",
-      "Silver remembers the meaning lost between words."
-    ],
-    notes: [
-      "R.F. Kuang wrote an absolute gut-punch of a book. The tragedy of Robin Swift broke something in me. Five cats, but keep tissues nearby.",
-      "For my study partner in college: remember when we thought academia was going to save us? Page 320 felt like our senior year.",
-      "The etymology footnotes alone are worth the price of admission. Lacerating, academic, and devastating."
-    ]
-  },
-  "Yellowface": {
-    quotes: [
-      "Athena was the kind of person who sucked all the oxygen out of a room and made you thank her for it.",
-      "The internet has a very short memory for nuance, and an infinite appetite for cruelty.",
-      "Everyone is performing guilt; no one is actually sorry."
-    ],
-    notes: [
-      "June Hayward is completely unhinged and awful, and I could not stop reading. A trainwreck in slow motion.",
-      "A razor-sharp satire about publishing, white guilt, and the toxic cesspool of social media. Four cats.",
-      "Read this in a single afternoon with my jaw permanently dropped. The secondhand embarrassment is off the charts."
-    ]
-  },
-  "The Picture of Dorian Gray": {
-    quotes: [
-      "There is only one thing in the world worse than being talked about, and that is not being talked about.",
-      "The books that the world calls immoral are books that show the world its own shame.",
-      "I have grown too fond of this portrait. It has become a part of my own existence."
-    ],
-    notes: [
-      "Oscar Wilde wrote sentences so decadent you feel like you need to rinse your mouth out with water. Flawless five cats.",
-      "For the person who cared more about appearing virtuous than actually being kind. You know who you are.",
-      "A tragedy of aesthetic vanity. Lord Henry's dialogue remains the most delightfully cynical in English literature."
-    ]
-  },
-  "Frankenstein": {
-    quotes: [
-      "Beware; for I am fearless, and therefore powerful.",
-      "I ought to be thy Adam, but I am rather the fallen angel.",
-      "Life, although it may only be an accumulation of anguish, is dear to me, and I will defend it."
-    ],
-    notes: [
-      "Mary Shelley was nineteen when she wrote this and managed to capture the core loneliness of existence better than anyone before or since.",
-      "The Creature's chapters in the snow are pure poetry. Victor Frankenstein is the true monster and nobody can change my mind.",
-      "Five cats for the cold winds, the Arctic ice, and the ache of wanting to be touched with tenderness."
-    ]
-  },
-  "Invisible Cities": {
-    quotes: [
-      "You take delight not in a city's seven or seventy wonders, but in the answer it gives to a question of yours.",
-      "Memory's images, once they are fixed in words, are erased.",
-      "The inferno of the living is not something that will be; it is already here."
-    ],
-    notes: [
-      "Calvino built a city out of thin air and silk threads. A book you don't read so much as dream inside of.",
-      "For Marco: wherever your travels take you, I hope you find the city where they trade postcards for silences.",
-      "Short, luminous, and infinite. Five cats for the architecture of imagination."
-    ]
-  },
-  "Labyrinths": {
-    quotes: [
-      "The universe (which others call the Library) is composed of an indefinite and perhaps infinite number of hexagonal galleries.",
-      "Time forks perpetually toward innumerable futures.",
-      "A man sets out to draw the world... and at the moment of death finds that that patient labyrinth of lines traces the image of his own face."
-    ],
-    notes: [
-      "Borges playing chess with infinity. Every story is a trapdoor that opens onto the cosmos.",
-      "Pierre Menard remains the greatest literary joke ever conceived. Pure intellectual ecstasy.",
-      "Read this whenever the world feels small. It expands the walls of your room into an infinite maze."
-    ]
-  },
-  "We Have Always Lived in the Castle": {
-    quotes: [
-      "My name is Mary Katherine Blackwood. I am eighteen years old, and I live with my sister Constance.",
-      "I have often thought that with any luck at all I could have been born a werewolf.",
-      "We eat our meals in silence, and the villagers still whisper behind the fence."
-    ],
-    notes: [
-      "Merricat Blackwood is the weirdest, most protective little sister in all of gothic fiction. Shirley Jackson at her peak.",
-      "For my sister: we will barricade the doors and drink blackberry tea forever. Let them talk.",
-      "Creepy, cozy, and deeply unsettling. Five cats for the poisoned sugar bowl."
-    ]
-  },
-  "The Secret History": {
-    quotes: [
-      "Beauty is terror. Whatever we call beautiful, we quiver before it.",
-      "Does such a thing as 'the fatal flaw,' that poetic dark hairline fracture, exist outside of literature?",
-      "I suppose there is a certain cruel charm to snow falling on graves."
-    ],
-    notes: [
-      "I read this in four days while ignoring every deadline in my life. It makes you want to wear wool coats and make terrible choices.",
-      "For anyone who knows the specific poison of wanting to belong to people who are rotten at the core. Five cats.",
-      "The winter section in Hampden is the most atmospheric fifty pages ever written. I could feel the frost."
-    ]
-  },
-  "Normal People": {
-    quotes: [
-      "Life offers up these moments of joy despite everything.",
-      "It's not like this with other people.",
-      "No one can be independent of other people completely."
-    ],
-    notes: [
-      "Connell and Marianne communicate worse than two malfunctioning fax machines and yet I sobbed on page 200.",
-      "Read this if you want to remember what it was like to be twenty and utterly convinced that wanting someone was the same as possessing them.",
-      "I left this on your nightstand the morning I left Dublin. Neither of us said what we meant."
-    ]
-  },
-  "The Song of Achilles": {
-    quotes: [
-      "He was half of my soul, as the poets say.",
-      "I could recognize him by touch alone, by smell; I would know him blind.",
-      "In the darkness, two shadows, reaching through the hopeless, heavy dusk."
-    ],
-    notes: [
-      "I finished this at 3:15 AM and stared at my ceiling until sunrise. Five cats, though my eyes still hurt.",
-      "For the only person I would have followed across the sea, even knowing how the prophecy ends.",
-      "Miller writes grief like an open wound that has refused to heal for three thousand years."
-    ]
-  },
-  "Stoner": {
-    quotes: [
-      "He was forty-three years old, and he could see nothing before him that he wished to enjoy.",
-      "In his forty-second year William Stoner learned that the person one loves at first is not the person one loves at last."
-    ],
-    notes: [
-      "Nothing happens in this book and yet everything happens. A quiet, devastating masterpiece.",
-      "Williams writes about ordinary failure with more dignity than most authors give to epic triumphs. Five cats.",
-      "For my father, who worked forty years in the same building and never once complained about the dust."
-    ]
-  },
-  "The Bell Jar": {
-    quotes: [
-      "I saw my life branching out before me like the green fig tree in the story.",
-      "I took a deep breath and listened to the old brag of my heart: I am, I am, I am."
-    ],
-    notes: [
-      "Plath’s prose is razor sharp. It doesn't ask for your pity; it lays out the suffocating glass bell with clinical honesty.",
-      "The fig tree passage should be required reading for anyone in their twenties paralyzed by choice.",
-      "Dark, funny, lacerating, and alive. Don't let the tragedy overshadow the sheer brilliance of the sentences."
-    ]
-  },
-  "Tomorrow, and Tomorrow, and Tomorrow": {
-    quotes: [
-      "To allow yourself to play with another person is no small risk.",
-      "What is a game? It’s the possibility of being someone else, of having another chance."
-    ],
-    notes: [
-      "The best exploration of creative partnership and non-romantic soulmates since Kavalier & Clay. Five cats.",
-      "For my best friend: we built so many imaginary worlds together when we were sixteen. I miss making things with you.",
-      "Zevin understands that sometimes the deepest love of your life is the person you argue with about pixels at 4 AM."
-    ]
-  },
-  "Bluets": {
-    quotes: [
-      "1. Suppose I were to begin by saying that I had fallen in love with a color.",
-      "To love someone who has no more use for you is a peculiar form of haunting."
-    ],
-    notes: [
-      "Maggie Nelson wrote the definitive text on heartbreak, acute longing, and the color blue. Glass shards you can't stop turning in your hand.",
-      "I underlined almost every line until the margins were ink-stained. For the blue that stayed after you left.",
-      "Short enough to read in one sitting, heavy enough to carry around for months."
-    ]
-  },
-  "Crush": {
-    quotes: [
-      "You’re in a car with a beautiful boy, and he won’t tell you that he loves you, but he loves you.",
-      "I take down the glass, I fill it with water, I say your name into the sink."
-    ],
-    notes: [
-      "Richard Siken writes poetry that feels like a panic attack inside an emergency room. Bloody, breathless, and desperately in love.",
-      "To the boy I never had the courage to kiss in the parking lot: this whole book is the letter I never sent.",
-      "Every single poem in Crush hits like a slammed door. Five cats isn't enough."
-    ]
-  },
-  "Before the Coffee Gets Cold": {
-    quotes: [
-      "The past never changes, but the heart of the person who returns to it can.",
-      "Drink the coffee before it gets cold."
-    ],
-    notes: [
-      "A quiet, tender little novel set in a Tokyo basement cafe. Made me want to call my sister and just listen to her breathe.",
-      "For anyone who wishes they could go back to one five-minute conversation just to say 'thank you' one more time.",
-      "Gentle, cozy, but deeply bittersweet underneath."
-    ]
-  },
-  "Piranesi": {
-    quotes: [
-      "The Beauty of the House is immeasurable; its Kindness infinite.",
-      "May your Paths be safe, your Floors unbroken and may the House fill your eyes with Wonder."
-    ],
-    notes: [
-      "Reading Piranesi felt like washing my brain in clean, cold saltwater. His innocence is the greatest antidote to cynicism.",
-      "Five cats for the tides, the albatross, the statues, and the pure gentleness of the narrator.",
-      "I read this during deep burnout. It reminded me that wonder is still possible."
-    ]
-  }
-};
-
-const NOTE_TEMPLATES = {
-  heartbreak: [
-    "I read this on the train ride home after we agreed to stop trying. Page {page} felt like you standing right in front of me with your coat already on.",
-    "You gave me this copy when we still lived on {street}. I finally finished it today. You were right about the ending, but wrong about us.",
-    "For {recipient}: I kept your boarding pass tucked into chapter four for two years. Yesterday I finally took it out. I hope the coast treats you well.",
-    "We spent three summers pretending this wasn't going to end the way it did. Now every line reads like an autopsy report.",
-    "I wanted to hate this because you loved it so much. Instead, it became the only thing that made sense during the months you stopped answering.",
-    "I saw your handwriting on the inside back cover from when we shared that studio on {street}. It took me twenty minutes to turn the page.",
-    "You told me once that the hardest part of leaving is the silence that follows the front door closing. This book sounds exactly like that silence."
-  ],
-  intimacy: [
-    "To {recipient}—for the nights when the radiator clanked and we took turns reading the dialogue out loud until our voices gave out.",
-    "Every time {author} writes about hands, I think of the way you hold the steering wheel when you're tired. I'll love you even when we're old and forgetful.",
-    "You once told me that some books feel like coming home after walking through a blizzard. This is that book for me, and so are you.",
-    "For the only person who understands why I cry at {scene}. Keep this on your bedside table.",
-    "I bought two copies so we could read the final chapter at the exact same minute across two different time zones.",
-    "I dog-eared page {page} because the narrator described the exact expression you make right before you fall asleep.",
-    "For {recipient}: whenever the city gets too loud, open this to chapter three. It's our bench in the park in book form."
+const MEMORIES = {
+  lover: [
+    "you fell asleep on my shoulder halfway through chapter two",
+    "we read this out loud on the balcony our first summer in the apartment",
+    "you left a sticky note on page one that just said 'good morning'",
+    "you still make me tea without asking",
+    "three years in and you still save me the last bite",
+    "you read the first page out loud in the bookstore like a weirdo and I bought it anyway",
+    "you hold my hand under the table at every family dinner",
+    "you waited outside my office in the rain with an umbrella you didn't even need",
+    "you know exactly how I take my coffee and you've never once gotten it wrong",
+    "the smell of your shampoo is still stuck between the pages",
+    "we stayed up till 4am debating the ending on the floor",
+    "you kissed my forehead while I was crying over the last three chapters",
+    "I bought this copy just so you could annotate the margins with your messy handwriting"
   ],
   situationship: [
-    "For {recipient}: leaving this here because texting you felt like stepping onto thin ice. Page {page} is essentially the conversation we keep avoiding.",
-    "We never gave it a name, but you gave me this book, and that felt heavier than any title we could have agreed on.",
-    "For someone who refuses to define anything: here is a story where nobody defines anything either, and look how that turned out.",
-    "Some people exist only in the margins of your year, but they leave the deepest pencil marks. I hope you find what you're looking for.",
-    "I don't know what we were doing from October to March, but this was the soundtrack to every late night drive back from your apartment.",
-    "To {recipient}: you sent me an Instagram reel of this quote at 1 AM and then didn't text for four days. Anyway, five cats.",
-    "We are the champions of saying everything except the one thing that matters. Read chapter seven when you have ten quiet minutes."
+    "we never figured out what we were",
+    "you text me at 1am and then disappear for a week",
+    "I still don't know what to call you",
+    "this is easier than saying it to your face",
+    "we said it was casual. it wasn't casual for me",
+    "you left your hoodie at my place in march and I never gave it back",
+    "we keep almost having the conversation",
+    "I still wonder what we would have been if we hadn't been so cowardly",
+    "you were my favorite almost",
+    "I see books you'd love every week and pretend I don't care",
+    "we acted like lovers until daylight came and then we were strangers again"
   ],
-  bestFriend: [
-    "To {recipient}: you are literally the main character in chapter {page} and if you deny it I am leaking our group chat. Five cats, read it immediately.",
-    "We stayed on FaceTime for three hours screaming about the plot twist on page {page}. My jaw was physically on the carpet.",
-    "Passing this to my favorite human alive. If you don't love this as much as I do, our friendship is on probation for 30 business days.",
-    "You brought this to the diner at 1 AM and forced me to read the prologue over lukewarm fries. Best recommendation you've ever made.",
-    "For my ride-or-die: life has been completely chaotic lately, but sitting on your floor trading paperbacks makes everything feel survivable.",
-    "If anyone else tries to speak to you before you finish chapter ten, tell them you are legally indisposed.",
-    "To {recipient}: I know you've had a rough couple of months. Here is 300 pages of pure escapism and zero emotional damage."
+  ex: [
+    "we don't talk anymore and that's probably right",
+    "I found your bookmark still tucked inside",
+    "you left this at my place when you moved out",
+    "no hard feelings. just a book I think you'd like",
+    "it's been two years and I still think of you when I see this cover",
+    "I hope whoever reads to you now does the voices",
+    "we were good for a while. I want to remember that part",
+    "I finally finished the book you begged me to read three summers ago",
+    "I hope you're happy now, genuinely",
+    "we couldn't save us, but I still saved this note"
   ],
-  candidReview: [
-    "Look, the prose is absolute poetry, but every single character in this novel desperately needs therapy and a tall glass of water. 3 cats for the writing alone.",
-    "I wanted to love this so badly because everyone on literary TikTok was losing their minds, but the third act completely betrayed the first 200 pages. 2 cats.",
-    "Five cats without hesitation. A slow, quiet unraveling that doesn't rely on cheap twists to devastate you. Kept me awake until dawn.",
-    "The middle section dragged a little near page {page}, but that final sentence knocked the wind out of me. Worth every single minute.",
-    "One cat for the plot, five cats for the atmosphere. I felt damp and cold the entire time I was reading it.",
-    "A four-cat read that would have been a five-cat read if the author had deleted the last forty pages and left us in the rain.",
-    "I read the opening chapter in a bookstore and had to buy it immediately. Beautiful, cruel, and impossible to forget."
+  friend: [
+    "you made this year bearable",
+    "thank you for the voice notes when I couldn't pick up the phone",
+    "I keep thinking about all those nights in your car outside the 7-eleven",
+    "you always know which book I need before I do",
+    "congrats on the new job, you earned every bit of it",
+    "you drove four hours to help me move and didn't complain once",
+    "you've never once made me feel like too much",
+    "you showed up with food the week everything fell apart",
+    "thank you for letting me rot on your couch without questions",
+    "for my favorite human to sit in comfortable silence with",
+    "you're the person I text first whenever something good happens"
   ],
-  comfortGrief: [
-    "Read this during the week my grandfather was in hospice. It didn't make the fluorescent lights any softer, but it kept me anchored to the earth.",
-    "A quiet, tender sanctuary of a book. When everything in the world feels loud and hostile, this was the only room I wanted to sit in.",
-    "For anyone who feels like they are walking through their own life as a ghost lately: this will gently remind you that you are made of flesh and bone.",
-    "I picked this up off a library cart on a rainy Tuesday when I couldn't stop crying in my car. It saved me in ways I don't know how to explain.",
-    "Some books don't try to teach you a lesson. They just sit beside you in the dark and hold your coat. This is one of them."
-  ]
+  bff: [
+    "if you don't read this I'm leaking the group chat",
+    "you've been my person since grade 4",
+    "read it so we can scream about it on facetime",
+    "I would take a bullet for you but I won't lend you my copy, so here's yours",
+    "you're literally the main character and you know it",
+    "remember when we got kicked out of the library for laughing",
+    "no one gets our unhinged inside jokes like you do",
+    "we share half a braincell and you have it today"
+  ],
+  crush: [
+    "I see you reading by the window every tuesday",
+    "you laughed at my bad joke in class and I've been thinking about it for a week",
+    "I don't have the guts to say this to your face",
+    "you recommended a song once and I've played it about three hundred times",
+    "we've talked maybe four times and I think about all four",
+    "I memorized what book you were carrying so I could read it too",
+    "maybe one day I'll actually look up from my laptop when you walk past"
+  ],
+  family: [
+    "you taught me to read before I started school",
+    "I know you don't really read, but try this one",
+    "you always kept a book in your bag for me",
+    "I miss Sunday lunches at your house",
+    "you're going off to college and I'm pretending I'm not sad about it",
+    "proud of you always, kiddo",
+    "thinking of you from miles away"
+  ],
+  general: [
+    "I found this at a thrift store and thought of you immediately",
+    "I've been meaning to give you this for months",
+    "you came to mind on almost every page",
+    "you said you needed something to read",
+    "just felt like leaving this here for someone who needs it today",
+    "left on the library return cart for whoever picks it up next"
+  ],
 };
 
-const STREETS = ["Bedford Ave", "Franklin St", "Lincoln Park", "Telegraph Ave", "Queen Street", "St. Marks", "Division St", "Parkway", "Commonwealth Ave", "Bleecker St"];
-const SCENES = ["the train station farewell", "the kitchen scene in chapter six", "the final letter", "the monologue in the rain", "the morning after the storm", "the attic conversation"];
-
-const GENERAL_QUOTES = [
-  "In the end, we are only the stories we had the courage to tell.",
-  "There is no loneliness like the loneliness of two people who once shared everything.",
-  "Some doors only open when you stop trying to knock them down.",
-  "I was never afraid of the dark until I saw how much light you carried with you.",
-  "We forgave each other in silence, which is just another way of saying goodbye.",
-  "A quiet persistent hunger for a life that felt honest.",
-  "You cannot measure the weight of an empty chair.",
-  "Let the morning come without apologies.",
-  "And yet, despite everything, the garden grew back.",
-  "I kept your name under my tongue like a secret coin.",
-  "Between what was said and what was felt, an entire continent drifted away.",
-  "I have loved you in three different cities and two different versions of myself.",
-  "We are made of all the conversations we were too proud to have.",
-  "The light that enters through a cracked window is still sunlight.",
-  "To remember someone is to keep building a house for them in your head."
+const TIES = [
+  "I thought of you during {bit}.",
+  "you'll know why I picked this when you get to {bit}.",
+  "{Bit} is basically us.",
+  "call me after {bit}.",
+  "I cried at {bit} and immediately wanted to tell you.",
+  "{Bit} reminded me of you so much I had to stop reading for a minute.",
+  "I won't spoil anything, just wait for {bit}.",
+  "please tell me what you think of {bit}.",
+  "pay attention to {bit}, that's where everything shifted for me.",
+  "when you reach {bit}, promise you'll remember this note.",
+  "I was literally gasping at {bit}.",
+  "{Bit} made me want to call you immediately."
 ];
 
-function randomChoice(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+const SIGNOFFS = {
+  lover: ["love you.", "always.", "x", "come home soon.", "", "", "yours,", "forever."],
+  situationship: ["", "anyway.", "or whatever.", "", "text me. or don't.", "take care."],
+  ex: ["take care.", "", "hope you're okay.", "be well.", "wishing you the best."],
+  friend: ["", "thank you.", "miss you.", "lunch soon?", "love you, seriously.", "catch up soon!"],
+  bff: ["love u", "", "ily", "ok bye", "you're welcome", "read it right now"],
+  crush: ["", "...hi", "anyway, hi.", "maybe one day I'll say this out loud.", "stay wonderful."],
+  family: ["love you.", "", "see you at christmas.", "call me when you finish.", "with love,"],
+  general: ["", "enjoy.", "x", "happy reading."],
+};
+
+const OPENERS = [
+  "Finished this on my lunch break and had to go back to work like nothing happened.",
+  "Picked it up because of the cover, stayed for everything else.",
+  "Took me two tries to get into it.",
+  "Read it in one weekend with my phone in another room.",
+  "My book club picked this and I was the only one who finished.",
+  "Started it on the train and missed my stop.",
+  "Borrowed it from my sister and I'm not giving it back.",
+  "Third reread.",
+  "Went in with low expectations.",
+  "Bought it secondhand and the previous owner's margin notes made it even better.",
+  "Read it during finals instead of studying. No regrets.",
+  "Saw it everywhere online and finally caved.",
+  "Read it on night shifts over two weeks.",
+  "A friend shoved it into my hands and said 'just read it'.",
+  "I almost DNF'd at page 40.",
+  "Read it in the hospital waiting room.",
+  "Finished it at 4am.",
+  "First book I've finished this year.",
+  "I'm a slow reader and still flew through it.",
+  "Read it on the beach and got sunburnt because I couldn't stop.",
+  "It's rare for a novel to make me sit in silence for an hour after finishing.",
+  "Read this during the typhoon while the power was out.",
+  "Picked this up on a whim at a train station bookstall.",
+  "", "", "",
+];
+
+const BIT_LINES = {
+  high: [
+    "{Bit} is the part I keep thinking about.",
+    "{Bit} alone is worth it.",
+    "I wasn't ready for {bit}.",
+    "Still thinking about {bit}.",
+    "{Bit} made me put it down and stare at a wall.",
+    "If you need one reason, {bit}.",
+    "The way {bit} unfolds is pure perfection.",
+    "I was genuinely tearing up during {bit}."
+  ],
+  low: [
+    "{Bit} was the best part for me.",
+    "I liked {bit}, but the rest dragged.",
+    "I wanted more of {bit}.",
+    "Parts like {bit} were brilliant, but the pacing felt uneven."
+  ],
+};
+
+const VERDICTS = {
+  5: ["Five cats.", "Easy five.", "Five cats, no notes.", "Already lending it out.", "An instant all-time favorite.", "", ""],
+  4: ["Four cats.", "Four, only because the middle slowed down for me.", "Docking one cat for pacing, but it's worth it.", "Solid four.", ""],
+  3: ["Three cats. Lovely in places, didn't fully land for me.", "Solid three. I get why people love it.", "Middle of the road for me.", "Good, just not life-changing."],
+  2: ["Two cats. I wanted to love it.", "Two. Some good lines, but it dragged."],
+  1: ["One cat. Not for me at all.", "Couldn't connect with it. One cat."],
+};
+
+const fill = (t, bit, name) =>
+  t.replace("{Bit}", cap(bit)).replace("{bit}", bit).replace("{name}", name);
+
+function composeDedication(book, rel, name) {
+  const key = rel ?? "general";
+  const mem = pick(MEMORIES[key]);
+  const tie = fill(pick(TIES), pick(book.bits), name);
+  const sign = pick(SIGNOFFS[key]);
+  const greet = pick(["", "", `For ${name}.`, `${name},`, `to ${name} —`, `${name}:`]);
+  
+  const variant = Math.floor(Math.random() * 4);
+  let parts;
+  if (variant === 0) {
+    parts = [greet, cap(mem) + ".", cap(tie), sign];
+  } else if (variant === 1) {
+    parts = [greet, cap(tie), cap(mem) + ".", sign];
+  } else if (variant === 2) {
+    parts = [greet, cap(mem) + ".", sign];
+  } else {
+    parts = [greet, cap(tie), sign];
+  }
+
+  let s = parts.filter(Boolean).join(" ").replace(/\.\./g, ".").replace(/\s+/g, " ").trim();
+  if (chance(0.30)) s = s.toLowerCase();
+  return s;
 }
 
-function randomWeightedChoice(items, weights) {
-  const r = Math.random();
-  let acc = 0;
-  for (let i = 0; i < items.length; i++) {
-    acc += weights[i];
-    if (r <= acc) return items[i];
+function composeRecommendation(book, rating) {
+  const bitLine = fill(pick(rating >= 4 ? BIT_LINES.high : BIT_LINES.low), pick(book.bits), "");
+  const opener = pick(OPENERS);
+  const verdict = pick(VERDICTS[rating]);
+  
+  const variant = Math.floor(Math.random() * 4);
+  let parts;
+  if (variant === 0) {
+    parts = [opener, bitLine, verdict];
+  } else if (variant === 1) {
+    parts = [bitLine, opener ? opener.toLowerCase() : "", verdict];
+  } else if (variant === 2) {
+    parts = [opener, bitLine];
+  } else {
+    parts = [bitLine, verdict];
   }
-  return items[items.length - 1];
+
+  let s = parts.filter(Boolean).join(" ").replace(/\.\./g, ".").replace(/\s+/g, " ").trim();
+  if (chance(0.12)) s = s.toLowerCase();
+  return s;
+}
+
+function randomTimestamp() {
+  const start = Date.parse("2026-10-19T02:00:00Z");
+  const end = Date.now() - 5 * 60 * 1000;
+  // Weight heavily towards recent days
+  const t = start + Math.pow(Math.random(), 0.75) * (end - start);
+  const d = new Date(t);
+  // Shift most posts into evening/night hours (Asia/Manila, UTC+8).
+  const hourLocal = weighted([8, 12, 15, 18, 20, 21, 22, 23, 1], [1, 2, 2, 3, 4, 5, 4, 3, 2]);
+  d.setUTCHours((hourLocal - 8 + 24) % 24, Math.floor(Math.random() * 60), Math.floor(Math.random() * 60));
+  return d.getTime() > end ? new Date(end - Math.random() * 3600e3).toISOString() : d.toISOString();
 }
 
 async function main() {
-  const requestedCount = Number.parseInt(process.argv[2] || "1238", 10);
-  const totalToInsert = Math.min(Math.max(requestedCount, 1), 5000);
+  const { data: rows, error } = await supabase.from("books").select("id, title");
+  if (error) throw error;
+  const idByTitle = new Map();
+  for (const r of rows) if (!idByTitle.has(r.title)) idByTitle.set(r.title, r.id);
 
-  console.log(`Connecting to Supabase at ${SUPABASE_URL}...`);
-  const { data: books, error: booksErr } = await supabase.from("books").select("id, title, author, genre");
-  if (booksErr || !books || !books.length) {
-    console.error("Failed to fetch books:", booksErr);
-    process.exit(1);
-  }
-  console.log(`Found ${books.length} books in catalog.`);
+  const titles = Object.keys(BOOKS).filter((t) => idByTitle.has(t));
+  const missing = Object.keys(BOOKS).filter((t) => !idByTitle.has(t));
+  if (missing.length) console.warn("Not in DB, skipped:", missing);
+  const weights = titles.map((t) => BOOKS[t].quotes.length * 2 + BOOKS[t].bits.length);
 
-  const { count: initialCount } = await supabase.from("posts").select("id", { count: "exact", head: true });
-  console.log(`Current posts in database: ${initialCount}`);
-  console.log(`Preparing exactly ${totalToInsert} unique, emotional submissions...`);
+  // Hand-written notes are used first; then composed notes
+  const handRecs = titles.flatMap((t) => (BOOKS[t].recs || []).map((n) => ({ t, n })));
+  const handDeds = titles.flatMap((t) => (BOOKS[t].deds || []).map((n) => ({ t, n })));
 
-  const now = Date.now();
-  const ninetyDaysMs = 90 * 86400 * 1000;
-  const submissions = [];
-
-  for (let i = 0; i < totalToInsert; i++) {
-    const book = randomChoice(books);
-    const isDedication = Math.random() < 0.48;
-    const lore = BOOK_LORE[book.title];
-
-    let quote = "";
-    let note = "";
-    let rating = null;
-    let relationship = null;
-    let recipient = null;
-    const hasSpoiler = Math.random() < 0.11;
-
-    const page = Math.floor(Math.random() * 280) + 24;
-    const street = randomChoice(STREETS);
-    const scene = randomChoice(SCENES);
-    const sender = randomChoice(SENDERS);
-    const targetRecipient = randomChoice(RECIPIENTS);
-
-    if (lore && Math.random() < 0.45) {
-      quote = randomChoice(lore.quotes);
-      note = randomChoice(lore.notes);
-    } else {
-      const moodKeys = Object.keys(NOTE_TEMPLATES);
-      const chosenMood = randomChoice(moodKeys);
-      const template = randomChoice(NOTE_TEMPLATES[chosenMood]);
-      note = template
-        .replace("{recipient}", targetRecipient)
-        .replace("{page}", page.toString())
-        .replace("{street}", street)
-        .replace("{scene}", scene)
-        .replace("{author}", book.author);
-
-      quote = randomChoice(GENERAL_QUOTES);
-    }
-
-    if (isDedication) {
-      relationship = randomWeightedChoice(RELATIONSHIPS, RELATIONSHIP_WEIGHTS);
-      recipient = targetRecipient;
-      rating = null;
-    } else {
-      rating = randomWeightedChoice([5, 4, 3, 2, 1], [0.52, 0.32, 0.10, 0.04, 0.02]);
-      relationship = null;
-      recipient = null;
-    }
-
-    const ageFactor = Math.pow(Math.random(), 1.7);
-    const createdAt = new Date(now - ageFactor * ninetyDaysMs).toISOString();
-
-    submissions.push({
-      kind: isDedication ? "dedication" : "recommendation",
-      book_id: book.id,
-      rating,
-      quote,
+  const seen = new Set();
+  const out = [];
+  const push = (title, kind, note, extra) => {
+    if (seen.has(note)) return false;
+    seen.add(note);
+    const book = BOOKS[title];
+    out.push({
+      kind,
+      book_id: idByTitle.get(title),
+      quote: pick(book.quotes),
       note,
-      recipient_name: recipient,
-      relationship,
-      sender_nickname: sender,
-      spoiler: hasSpoiler,
-      created_at: createdAt
+      sender_nickname: pick(SENDERS),
+      spoiler: chance(0.07),
+      created_at: randomTimestamp(),
+      ...extra,
     });
+    return true;
+  };
+
+  const recRating = () => weighted([5, 4, 3, 2, 1], [48, 34, 12, 4, 2]);
+  const relFor = () => weighted(["lover", "situationship", "ex", "friend", "bff", "crush", "family", null], [20, 15, 14, 20, 12, 9, 8, 2]);
+
+  for (const { t, n } of handRecs) {
+    const r = /two stars|2 cats|two cats/i.test(n) ? 2 : /three cats|a warm three/i.test(n) ? 3 : /little long|could've lost|bit obvious|a bit preachy/i.test(n) ? 4 : weighted([5, 4], [7, 3]);
+    push(t, "recommendation", n, { rating: r, recipient_name: null, relationship: null });
+  }
+  for (const { t, n } of handDeds) {
+    push(t, "dedication", n, { rating: null, recipient_name: pick(NAMES), relationship: relFor() });
   }
 
-  console.log(`Generated ${submissions.length} posts. Inserting in safe batches of 50...`);
-
-  const BATCH_SIZE = 50;
-  let insertedCount = 0;
-
-  for (let i = 0; i < submissions.length; i += BATCH_SIZE) {
-    const batch = submissions.slice(i, i + BATCH_SIZE);
-    const { error } = await supabase.from("posts").insert(batch);
-    if (error) {
-      console.error(`Error inserting batch at ${i}:`, error.message);
-      await new Promise((r) => setTimeout(r, 600));
-      const retry = await supabase.from("posts").insert(batch);
-      if (retry.error) {
-        console.error(`Retry failed at ${i}:`, retry.error.message);
-      } else {
-        insertedCount += batch.length;
-      }
+  let guard = 0;
+  while (out.length < COUNT && guard++ < COUNT * 30) {
+    const title = weighted(titles, weights);
+    const book = BOOKS[title];
+    if (chance(0.52)) {
+      const rating = recRating();
+      push(title, "recommendation", composeRecommendation(book, rating), { rating, recipient_name: null, relationship: null });
     } else {
-      insertedCount += batch.length;
-    }
-    if ((i + BATCH_SIZE) % 250 === 0 || i + BATCH_SIZE >= submissions.length) {
-      console.log(`Progress: ${insertedCount}/${submissions.length} inserted...`);
+      const rel = relFor();
+      const name = pick(NAMES);
+      push(title, "dedication", composeDedication(book, rel, name), { rating: null, recipient_name: name, relationship: rel });
     }
   }
 
-  console.log(`\nSuccessfully inserted ${insertedCount} submissions!`);
-  const { count: finalCount } = await supabase.from("posts").select("id", { count: "exact", head: true });
-  console.log(`Previous count: ${initialCount} -> New total posts in database: ${finalCount}`);
+  console.log(`Prepared ${out.length} posts across ${titles.length} books.`);
+  if (DRY_RUN) {
+    for (const p of out.sort(() => Math.random() - 0.5).slice(0, 15)) {
+      const t = rows.find((r) => r.id === p.book_id).title;
+      console.log(`\n[${p.kind}${p.rating ? " " + p.rating + "★" : " → " + p.recipient_name + " (" + p.relationship + ")"}] ${t}\n  "${p.quote}"\n  ${p.note}\n  — ${p.sender_nickname}`);
+    }
+    return;
+  }
+
+  let inserted = 0;
+  for (let i = 0; i < out.length; i += 50) {
+    const batch = out.slice(i, i + 50);
+    let { error: e } = await supabase.from("posts").insert(batch);
+    if (e) {
+      await new Promise((r) => setTimeout(r, 800));
+      ({ error: e } = await supabase.from("posts").insert(batch));
+    }
+    if (e) {
+      console.error(`Batch ${i} failed:`, e.message);
+    } else {
+      inserted += batch.length;
+    }
+  }
+  console.log(`Successfully inserted ${inserted} posts into Supabase.`);
 }
 
-main().catch((err) => {
-  console.error("Fatal script error:", err);
+main().catch((e) => {
+  console.error(e);
   process.exit(1);
 });
