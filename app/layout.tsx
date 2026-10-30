@@ -10,6 +10,16 @@ const pinyon = Pinyon_Script({ weight: "400", subsets: ["latin"], variable: "--f
 export const metadata: Metadata = {
   title: "read receipts — A book can say it for you",
   description: "Recommend a book. Dedicate one. Stay anonymous.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

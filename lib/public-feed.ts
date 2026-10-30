@@ -82,15 +82,15 @@ async function selectRows(
 }
 
 /** Loads the public feed: the latest recommendations and the latest public dedications. */
-export async function fetchFeed(client: SupabaseClient) {
+export async function fetchFeed(client: SupabaseClient, limit = 250) {
   const [recent, dedicated] = await Promise.all([
     selectRows(
-      client.from("public_posts").select(fieldsWithRel).eq("kind", "recommendation").order("created_at", { ascending: false }).limit(60),
-      () => client.from("public_posts").select(basicFields).eq("kind", "recommendation").order("created_at", { ascending: false }).limit(60)
+      client.from("public_posts").select(fieldsWithRel).eq("kind", "recommendation").order("created_at", { ascending: false }).limit(limit),
+      () => client.from("public_posts").select(basicFields).eq("kind", "recommendation").order("created_at", { ascending: false }).limit(limit)
     ),
     selectRows(
-      client.from("public_posts").select(fieldsWithRel).eq("kind", "dedication").order("created_at", { ascending: false }).limit(60),
-      () => client.from("public_posts").select(basicFields).eq("kind", "dedication").order("created_at", { ascending: false }).limit(60)
+      client.from("public_posts").select(fieldsWithRel).eq("kind", "dedication").order("created_at", { ascending: false }).limit(limit),
+      () => client.from("public_posts").select(basicFields).eq("kind", "dedication").order("created_at", { ascending: false }).limit(limit)
     ),
   ]);
   const mapped = await withBooks(client, [...recent, ...dedicated]);
