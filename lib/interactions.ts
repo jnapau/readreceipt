@@ -43,40 +43,12 @@ export function getClientId() {
   }
 }
 
-/** Shareable deep link to a single note. */
-export function noteUrl(id: string) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return `${origin}/?note=${encodeURIComponent(id)}`;
-}
-
-export async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Older browsers / insecure contexts: fall back to a hidden textarea.
-    try {
-      const area = document.createElement("textarea");
-      area.value = text;
-      area.setAttribute("readonly", "");
-      area.style.position = "fixed";
-      area.style.opacity = "0";
-      document.body.appendChild(area);
-      area.select();
-      const ok = document.execCommand("copy");
-      area.remove();
-      return ok;
-    } catch {
-      return false;
-    }
-  }
-}
-
 /* ------------------------------------------------------------------ */
 /* Purrs                                                               */
 /* ------------------------------------------------------------------ */
 
 const PURRED_KEY = "rr:purred";
+const PURR_CHUNK_SIZE = 150;
 
 export function readPurred(): Record<string, true> {
   return readJson<Record<string, true>>(PURRED_KEY, {});
@@ -93,10 +65,20 @@ function rememberPurr(id: string) {
 export async function fetchPurrCounts(client: SupabaseClient, ids: string[]): Promise<Record<string, number> | null> {
   const stored = ids.filter(isStoredNote);
   if (!stored.length) return {};
-  const { data, error } = await client.from("purr_counts").select("post_id,purrs").in("post_id", stored);
-  if (error) return null;
+  const chunks: string[][] = [];
+  for (let i = 0; i < stored.length; i += PURR_CHUNK_SIZE) {
+    chunks.push(stored.slice(i, i + PURR_CHUNK_SIZE));
+  }
   const counts: Record<string, number> = {};
-  for (const row of (data ?? []) as { post_id: string; purrs: number }[]) counts[row.post_id] = Number(row.purrs) || 0;
+  const results = await Promise.all(
+    chunks.map((chunk) => client.from("purr_counts").select("post_id,purrs").in("post_id", chunk))
+  );
+  for (const { data, error } of results) {
+    if (error) return null;
+    for (const row of (data ?? []) as { post_id: string; purrs: number }[]) {
+      counts[row.post_id] = Number(row.purrs) || 0;
+    }
+  }
   return counts;
 }
 

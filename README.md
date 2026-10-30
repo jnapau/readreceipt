@@ -11,7 +11,6 @@ An anonymous social reading journal for recommending books, dedicating them to s
 - Combines both formats in a newest-first feed with dedicated category views and a rotating Top Pick.
 - Adds account-free, once-per-device purrs and public marginalia to every entry.
 - Lets optional account holders keep a private book shelf.
-- Generates a share-ready 9:16 image for Instagram Stories.
 - Exports public-safe data as CSV or JSON for analysis.
 
 ## Product decisions

@@ -20,8 +20,10 @@ type BookRow = { id: string; open_library_key: string; title: string; author: st
 
 const fieldsWithRel = "id,kind,book_id,rating,quote,note,recipient_name,relationship,sender_nickname,spoiler,created_at";
 const basicFields = "id,kind,book_id,rating,quote,note,recipient_name,sender_nickname,spoiler,created_at";
+const PAGE_SIZE = 1000;
+const BOOK_CHUNK_SIZE = 200;
 
-async function selectBooks(client: SupabaseClient, ids: string[]) {
+async function selectBooksChunk(client: SupabaseClient, ids: string[]) {
   // `genre` and `cover_url` arrive with migrations; fall back gracefully if not applied yet.
   const withGenre = await client.from("books").select("id,open_library_key,title,author,cover_id,color,cover_url,genre").in("id", ids);
   if (!withGenre.error) return (withGenre.data ?? []) as BookRow[];
@@ -30,6 +32,15 @@ async function selectBooks(client: SupabaseClient, ids: string[]) {
   const basic = await client.from("books").select("id,open_library_key,title,author,cover_id,color").in("id", ids);
   if (basic.error) throw basic.error;
   return (basic.data ?? []) as BookRow[];
+}
+
+async function selectBooks(client: SupabaseClient, ids: string[]) {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += BOOK_CHUNK_SIZE) {
+    chunks.push(ids.slice(i, i + BOOK_CHUNK_SIZE));
+  }
+  const results = await Promise.all(chunks.map((chunk) => selectBooksChunk(client, chunk)));
+  return results.flat();
 }
 
 async function withBooks(client: SupabaseClient, rows: PublicPost[]) {
@@ -81,37 +92,36 @@ async function selectRows(
   return (Array.isArray(fallback.data) ? fallback.data : []) as PublicPost[];
 }
 
-/** Loads the public feed: the latest recommendations and the latest public dedications. */
-export async function fetchFeed(client: SupabaseClient, limit = 250) {
-  const [recent, dedicated] = await Promise.all([
-    selectRows(
-      client.from("public_posts").select(fieldsWithRel).eq("kind", "recommendation").order("created_at", { ascending: false }).limit(limit),
-      () => client.from("public_posts").select(basicFields).eq("kind", "recommendation").order("created_at", { ascending: false }).limit(limit)
-    ),
-    selectRows(
-      client.from("public_posts").select(fieldsWithRel).eq("kind", "dedication").order("created_at", { ascending: false }).limit(limit),
-      () => client.from("public_posts").select(basicFields).eq("kind", "dedication").order("created_at", { ascending: false }).limit(limit)
-    ),
-  ]);
-  const mapped = await withBooks(client, [...recent, ...dedicated]);
+/** Loads the complete public feed: all recommendations and public dedications ordered from latest to oldest. */
+export async function fetchFeed(client: SupabaseClient) {
+  const rows: PublicPost[] = [];
+  for (let start = 0; ; start += PAGE_SIZE) {
+    const end = start + PAGE_SIZE - 1;
+    const pageRows = await selectRows(
+      client
+        .from("public_posts")
+        .select(fieldsWithRel)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(start, end),
+      () =>
+        client
+          .from("public_posts")
+          .select(basicFields)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(start, end)
+    );
+    rows.push(...pageRows);
+    if (pageRows.length < PAGE_SIZE) break;
+  }
+
+  const mapped = await withBooks(client, rows);
   const items = mapped.map(({ row, book }) => toFeedItem(row, book));
   return {
     posts: items.filter((item) => item.kind !== "dedication"),
     dedications: items.filter((item) => item.kind === "dedication"),
   };
-}
-
-/** Fetches a single note (recommendation or dedication) for deep links. */
-export async function fetchNoteById(client: SupabaseClient, id: string): Promise<SamplePost | null> {
-  const res = await client.from("public_posts").select(fieldsWithRel).eq("id", id).maybeSingle();
-  let row = res.data as PublicPost | null;
-  if (res.error) {
-    const fallback = await client.from("public_posts").select(basicFields).eq("id", id).maybeSingle();
-    row = fallback.data as PublicPost | null;
-  }
-  if (!row) return null;
-  const [mapped] = await withBooks(client, [row]);
-  return mapped ? toFeedItem(mapped.row, mapped.book) : null;
 }
 
 export async function fetchDedications(client: SupabaseClient, name: string): Promise<Dedication[]> {

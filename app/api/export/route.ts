@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { fetchPurrCounts } from "@/lib/interactions";
 import { fetchFeed } from "@/lib/public-feed";
 import { samplePosts, sampleDedications, dedicationToFeedItem, type SamplePost } from "@/lib/sample-data";
 
@@ -13,12 +14,16 @@ export async function GET(request: Request) {
   const format = url.searchParams.get("format") || "json";
 
   let posts: SamplePost[] = [];
-  const purrCounts: Record<string, number> = {};
+  let purrCounts: Record<string, number> = {};
   const client = createClient();
   if (client) {
     try {
       const feed = await fetchFeed(client);
-      posts = [...feed.posts, ...feed.dedications];
+      posts = [...feed.posts, ...feed.dedications].sort((a, b) => {
+        const aTime = a.createdAt ? Date.parse(a.createdAt) : 0;
+        const bTime = b.createdAt ? Date.parse(b.createdAt) : 0;
+        return bTime - aTime;
+      });
     } catch {
       posts = [];
     }
@@ -37,13 +42,8 @@ export async function GET(request: Request) {
       .map((post) => post.id)
       .filter((id): id is string => !!id && /^[0-9a-f-]{36}$/i.test(id));
     if (storedIds.length) {
-      const { data } = await client
-        .from("purr_counts")
-        .select("post_id,purrs")
-        .in("post_id", storedIds);
-      for (const row of (data ?? []) as { post_id: string; purrs: number }[]) {
-        purrCounts[row.post_id] = Number(row.purrs) || 0;
-      }
+      const fetched = await fetchPurrCounts(client, storedIds);
+      if (fetched) purrCounts = fetched;
     }
   }
 

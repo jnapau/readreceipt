@@ -7,7 +7,6 @@ import { CoverArt } from "@/components/cover-art";
 import { CatRating } from "@/components/cat-rating";
 import { Marginalia } from "@/components/marginalia";
 import { PurrButton, type PurrState } from "@/components/purr-button";
-import { CopyLinkButton, ShareStoryButton } from "@/components/share-actions";
 import { isDedication, type SamplePost } from "@/lib/sample-data";
 
 export function PostDetailModal({ post, onClose, revealed, onToggleReveal, purr }: {
@@ -76,11 +75,11 @@ export function PostDetailModal({ post, onClose, revealed, onToggleReveal, purr 
               </div>
               {post.spoiler && <button className="spoiler-reveal detail-spoiler-button" type="button" onClick={onToggleReveal}>{revealed ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />} {revealed ? "Hide spoiler" : "Click to reveal spoiler"}</button>}
               <div className="detail-from">From <strong>{post.from}</strong></div>
-              <div className="detail-actions">
-                <ShareStoryButton post={post} />
-                {post.id && <CopyLinkButton id={post.id} />}
-                {purr && <PurrButton {...purr} />}
-              </div>
+              {purr && (
+                <div className="detail-actions">
+                  <PurrButton {...purr} />
+                </div>
+              )}
             </div>
           </div>
           {post.id && <Marginalia postId={post.id} />}

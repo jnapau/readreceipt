@@ -4,7 +4,6 @@ import { BookHeart, Eye, EyeOff, Sparkles } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
 import { CatRating } from "@/components/cat-rating";
 import { PurrButton, type PurrState } from "@/components/purr-button";
-import { ShareStoryButton } from "@/components/share-actions";
 import { ShelfButton } from "@/components/shelf-button";
 import { isDedication, type SamplePost } from "@/lib/sample-data";
 
@@ -66,7 +65,6 @@ export function PostCard({ post, featured = false, onOpen, onRequestAuth, reveal
           <span className="post-footer-actions">
             {purr && <PurrButton {...purr} compact />}
             <ShelfButton book={post.book} onRequestAuth={onRequestAuth} />
-            <ShareStoryButton post={post} iconOnly />
           </span>
         </div>
       </div>

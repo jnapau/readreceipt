@@ -13,7 +13,7 @@ import { collageBooks, sampleDedications, samplePosts, dedicationToFeedItem } fr
 import type { Dedication, SamplePost } from "@/lib/sample-data";
 import type { Book } from "@/lib/books";
 import { createClient } from "@/lib/supabase/client";
-import { fetchFeed, fetchNoteById } from "@/lib/public-feed";
+import { fetchFeed } from "@/lib/public-feed";
 import { fetchPurrCounts, givePurr, readPurred } from "@/lib/interactions";
 
 async function persistPost(
@@ -139,31 +139,6 @@ export default function HomePage() {
     }).catch(() => { if (active) setFeedMode("error"); });
     return () => { active = false; };
   }, []);
-
-  // Direct Note Deep-Linking: check on mount for ?note=[id]
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const noteId = params.get("note");
-    if (!noteId) return;
-
-    const allCurrent: SamplePost[] = [
-      ...posts,
-      ...dedications.map((d) => dedicationToFeedItem(d)),
-    ];
-    const match = allCurrent.find((item) => item.id === noteId);
-    if (match) {
-      setDetailPost(match);
-      return;
-    }
-
-    const supabase = createClient();
-    if (supabase) {
-      fetchNoteById(supabase, noteId).then((fetched) => {
-        if (fetched) setDetailPost(fetched);
-      });
-    }
-  }, [posts, dedications]);
 
   // Deterministic 3-Day Top Pick Rotation from recommendations
   const orderedRecommendations = useMemo(() => {
